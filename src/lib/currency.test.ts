@@ -24,4 +24,16 @@ describe("formatCurrency", () => {
     expect(result).toContain("AED");
     expect(result).toContain("500.00");
   });
+
+  it("returns 'AED \u2014' for NaN", () => {
+    expect(formatCurrency(NaN)).toBe("AED \u2014");
+  });
+
+  it("returns 'AED \u2014' for Infinity", () => {
+    expect(formatCurrency(Infinity)).toBe("AED \u2014");
+  });
+
+  it("returns 'AED \u2014' for -Infinity", () => {
+    expect(formatCurrency(-Infinity)).toBe("AED \u2014");
+  });
 });

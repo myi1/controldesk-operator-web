@@ -141,3 +141,45 @@ describe("daysUntil", () => {
     expect(daysUntil(future)).toBe(2);
   });
 });
+
+/* ------------------------------------------------------------------ */
+/*  Invalid / empty date guards                                         */
+/* ------------------------------------------------------------------ */
+
+describe("invalid / empty date handling", () => {
+  it("formatRelative returns \u2014 for an empty string", () => {
+    expect(formatRelative("")).toBe("\u2014");
+  });
+
+  it("formatRelative returns \u2014 for a non-date string", () => {
+    expect(formatRelative("not-a-date")).toBe("\u2014");
+  });
+
+  it("formatAbsolute returns \u2014 for an empty string", () => {
+    expect(formatAbsolute("")).toBe("\u2014");
+  });
+
+  it("formatAbsolute returns \u2014 for a non-date string", () => {
+    expect(formatAbsolute("invalid")).toBe("\u2014");
+  });
+
+  it("formatDateTime returns \u2014 for an empty string", () => {
+    expect(formatDateTime("")).toBe("\u2014");
+  });
+
+  it("isOverdue returns false for an empty string", () => {
+    expect(isOverdue("")).toBe(false);
+  });
+
+  it("isOverdue returns false for a non-date string", () => {
+    expect(isOverdue("bad-date")).toBe(false);
+  });
+
+  it("daysUntil returns 0 for an empty string", () => {
+    expect(daysUntil("")).toBe(0);
+  });
+
+  it("daysUntil returns 0 for a non-date string", () => {
+    expect(daysUntil("bad-date")).toBe(0);
+  });
+});

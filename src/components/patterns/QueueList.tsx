@@ -92,6 +92,20 @@ function exportToCsv(rows: QueueRowType[], filename: string) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Action key → human label                                          */
+/* ------------------------------------------------------------------ */
+
+const ACTION_LABELS: Record<string, string> = {
+  assign: "Assign",
+  snooze: "Snooze",
+  acknowledge: "Acknowledge",
+};
+
+function humaniseActionKey(key: string): string {
+  return ACTION_LABELS[key] ?? key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/* ------------------------------------------------------------------ */
 /*  Select-all header — reads selection store directly so the          */
 /*  columns array never needs to re-create on selection changes.       */
 /* ------------------------------------------------------------------ */
@@ -195,9 +209,11 @@ export function QueueList({
             const failedCount = failures.length;
             const successCount = docnames.length - failedCount;
 
+            const label = humaniseActionKey(actionKey);
+
             if (failedCount === 0) {
               toast({
-                title: `${actionKey} applied`,
+                title: `${label} applied`,
                 description: `${successCount} item${successCount !== 1 ? "s" : ""} updated.`,
                 variant: "success",
               });
@@ -205,7 +221,7 @@ export function QueueList({
               // All failed — show first reason as a hint
               const hint = failures[0]?.reason;
               toast({
-                title: `${actionKey} failed`,
+                title: `${label} failed`,
                 description: hint
                   ? `All ${failedCount} items failed. First error: ${hint}`
                   : `All ${failedCount} items could not be updated.`,
@@ -215,7 +231,7 @@ export function QueueList({
               // Partial — succeeded some, failed some
               const hint = failures[0]?.reason;
               toast({
-                title: `Partial success`,
+                title: `${label} — partial success`,
                 description: hint
                   ? `${successCount} updated, ${failedCount} failed. First error: ${hint}`
                   : `${successCount} updated, ${failedCount} could not be processed.`,
@@ -227,7 +243,7 @@ export function QueueList({
           },
           onError: (err) => {
             toast({
-              title: `Bulk ${actionKey} failed`,
+              title: `${humaniseActionKey(actionKey)} failed`,
               description: err.message || "Something went wrong.",
               variant: "error",
             });

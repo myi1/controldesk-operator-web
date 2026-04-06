@@ -95,6 +95,23 @@ function PageSkeleton() {
 }
 
 /* ================================================================== */
+/*  Field value formatting                                             */
+/* ================================================================== */
+
+/**
+ * Render a FieldSnapshot value safely for display.
+ * - null / undefined → em dash
+ * - boolean          → "Yes" / "No"  (never "true" / "false")
+ * - number 0         → "0"           (0 is a valid value, not a dash)
+ * - everything else  → String()
+ */
+function formatFieldValue(value: string | number | boolean | null): string {
+  if (value == null) return "\u2014";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  return String(value);
+}
+
+/* ================================================================== */
 /*  Tab: Overview                                                      */
 /* ================================================================== */
 
@@ -127,7 +144,7 @@ function ContextSectionCard({ section }: { section: ContextSection }) {
                 "text-fg-default text-right truncate",
               )}
             >
-              {field.value != null ? String(field.value) : "\u2014"}
+              {formatFieldValue(field.value)}
             </dd>
           </div>
         ))}
@@ -167,7 +184,7 @@ function FieldSnapshotCard({ fields }: { fields: FieldSnapshot[] }) {
                 "text-fg-default text-right truncate",
               )}
             >
-              {field.value != null ? String(field.value) : "\u2014"}
+              {formatFieldValue(field.value)}
             </dd>
           </div>
         ))}
