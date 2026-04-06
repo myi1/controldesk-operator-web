@@ -7,25 +7,30 @@ export const ROUTE_PATHS = {
   root: "/",
   login: "/login",
 
+  // Personal scopes
+  work: "/work",
+  intake: "/intake",
+
   // Queue views
   queue: "/queue/:queueKey",
-  queueWithScope: "/queue/:queueKey/scope/:scopeKey",
 
-  // Case detail
-  caseDetail: "/queue/:queueKey/case/:doctype/:docname",
-  caseTimeline: "/queue/:queueKey/case/:doctype/:docname/timeline",
-  caseActions: "/queue/:queueKey/case/:doctype/:docname/actions",
+  // Case detail (matches router.tsx: /case/:caseType/:caseId)
+  caseDetail: "/case/:caseType/:caseId",
 
-  // Saved views
+  // Guided runner
+  caseRun: "/case/:caseType/:caseId/run",
+
+  // Saved views (future)
   savedView: "/view/:viewKey",
 
-  // Role inbox
+  // Role inbox (future)
   roleInbox: "/inbox/:roleInboxKey",
 
   // Settings
   settings: "/settings",
-  settingsProfile: "/settings/profile",
-  settingsPreferences: "/settings/preferences",
+
+  // Access denied
+  accessDenied: "/access-denied",
 
   // Catch-all
   notFound: "*",
@@ -41,32 +46,12 @@ export function queuePath(queueKey: string): string {
   return `/queue/${queueKey}`;
 }
 
-export function queueScopePath(queueKey: string, scopeKey: string): string {
-  return `/queue/${queueKey}/scope/${scopeKey}`;
+export function caseDetailPath(caseType: string, caseId: string): string {
+  return `/case/${caseType}/${caseId}`;
 }
 
-export function caseDetailPath(
-  queueKey: string,
-  doctype: string,
-  docname: string,
-): string {
-  return `/queue/${queueKey}/case/${doctype}/${docname}`;
-}
-
-export function caseTimelinePath(
-  queueKey: string,
-  doctype: string,
-  docname: string,
-): string {
-  return `/queue/${queueKey}/case/${doctype}/${docname}/timeline`;
-}
-
-export function caseActionsPath(
-  queueKey: string,
-  doctype: string,
-  docname: string,
-): string {
-  return `/queue/${queueKey}/case/${doctype}/${docname}/actions`;
+export function caseRunPath(caseType: string, caseId: string): string {
+  return `/case/${caseType}/${caseId}/run`;
 }
 
 export function savedViewPath(viewKey: string): string {

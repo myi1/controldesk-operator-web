@@ -190,6 +190,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         ))}
 
         <Toast.Viewport
+          aria-live="polite"
+          aria-label="Notifications"
           className={cn(
             "fixed bottom-4 right-4 z-[var(--z-toast)]",
             "flex flex-col gap-2",

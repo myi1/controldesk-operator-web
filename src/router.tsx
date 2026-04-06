@@ -1,7 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
-import { lazy } from "react";
-import { createHashRouter, Navigate } from "react-router-dom";
+import { Suspense, lazy } from "react";
+import { createHashRouter } from "react-router-dom";
 import { AppShell } from "./ui/AppShell";
+import { Spinner } from "./components/primitives/Spinner";
+import { RoleRedirect } from "./ui/RoleRedirect";
 
 /* ------------------------------------------------------------------ */
 /*  Lazy page imports                                                  */
@@ -12,27 +14,44 @@ const QueueWorkbenchPage = lazy(() => import("./pages/QueueWorkbenchPage"));
 const CaseDetailPage = lazy(() => import("./pages/CaseDetailPage"));
 const GuidedRunnerPage = lazy(() => import("./pages/GuidedRunnerPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const AccessDeniedPage = lazy(() => import("./pages/AccessDeniedPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
+
+/* ------------------------------------------------------------------ */
+/*  Login page fallback (outside AppShell, needs its own Suspense)     */
+/* ------------------------------------------------------------------ */
+
+function LoginFallback() {
+  return (
+    <div className="flex min-h-dvh items-center justify-center bg-bg-app">
+      <Spinner size="lg" />
+    </div>
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /*  Route tree                                                         */
 /* ------------------------------------------------------------------ */
 
 export const router = createHashRouter([
-  // Public routes (no shell)
+  // Public routes (no shell) — wrapped in Suspense for lazy load
   {
     path: "/login",
-    element: <LoginPage />,
+    element: (
+      <Suspense fallback={<LoginFallback />}>
+        <LoginPage />
+      </Suspense>
+    ),
   },
 
   // Authenticated routes (with shell)
   {
     element: <AppShell />,
     children: [
-      // Root redirect
+      // Root redirect — role-aware landing page
       {
         index: true,
-        element: <Navigate to="/work" replace />,
+        element: <RoleRedirect />,
       },
 
       // Personal scopes
@@ -67,6 +86,12 @@ export const router = createHashRouter([
       {
         path: "settings",
         element: <SettingsPage />,
+      },
+
+      // Access denied
+      {
+        path: "access-denied",
+        element: <AccessDeniedPage />,
       },
 
       // Catch-all

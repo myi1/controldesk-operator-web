@@ -2,7 +2,7 @@
 // Keyboard shortcut manager
 // ---------------------------------------------------------------------------
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export interface KeyboardShortcut {
   /** Key descriptor, e.g. "k", "mod+k", "Escape". */
@@ -35,17 +35,20 @@ function matchesShortcut(e: KeyboardEvent, shortcut: string): boolean {
 }
 
 /**
- * Register keyboard shortcuts. Listeners are added/removed automatically
- * based on the `enabled` flag (defaults to `true`).
+ * Register keyboard shortcuts. Uses a ref to avoid re-registering
+ * listeners when handler functions change identity.
  */
 export function useKeyboard(shortcuts: KeyboardShortcut[]): void {
+  const shortcutsRef = useRef(shortcuts);
+  shortcutsRef.current = shortcuts;
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       // Don't intercept shortcuts when the user is typing in an input
       const tag = (e.target as HTMLElement).tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
 
-      for (const shortcut of shortcuts) {
+      for (const shortcut of shortcutsRef.current) {
         if (shortcut.enabled === false) continue;
         if (matchesShortcut(e, shortcut.key)) {
           e.preventDefault();
@@ -57,5 +60,5 @@ export function useKeyboard(shortcuts: KeyboardShortcut[]): void {
 
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [shortcuts]);
+  }, []); // stable — reads from ref
 }

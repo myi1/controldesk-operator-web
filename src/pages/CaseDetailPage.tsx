@@ -174,12 +174,20 @@ function OverviewTab({
   timelineEntries,
   blockerReason,
   blockerMessage,
+  noteText,
+  onNoteTextChange,
+  onAddNote,
+  addingNote,
 }: {
   contextSections: ContextSection[];
   fieldSnapshot: FieldSnapshot[];
   timelineEntries: AuditTimelineEntry[];
   blockerReason: string | undefined;
   blockerMessage: string | undefined;
+  noteText: string;
+  onNoteTextChange: (text: string) => void;
+  onAddNote: () => void;
+  addingNote: boolean;
 }) {
   // Determine which field_snapshot keys are already shown inside context_sections
   const sectionFieldKeys = useMemo(() => {
@@ -318,6 +326,8 @@ function OverviewTab({
           <textarea
             placeholder="Add a note..."
             rows={2}
+            value={noteText}
+            onChange={(e) => onNoteTextChange(e.target.value)}
             className={cn(
               "w-full rounded-[var(--radius-md)] border border-border-default bg-bg-surface px-3 py-2",
               "text-[length:var(--text-small-size)] text-fg-default placeholder:text-fg-faint",
@@ -326,8 +336,15 @@ function OverviewTab({
               "transition-[border-color,box-shadow] duration-[var(--duration-fast)]",
             )}
           />
-          <Button variant="secondary" size="sm" icon={Send} className="mt-2">
-            Add Note
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={Send}
+            className="mt-2"
+            disabled={!noteText.trim() || addingNote}
+            onClick={onAddNote}
+          >
+            {addingNote ? "Adding..." : "Add Note"}
           </Button>
         </div>
       </div>
@@ -812,6 +829,10 @@ export default function CaseDetailPage() {
     null,
   );
 
+  // Note state
+  const [noteText, setNoteText] = useState("");
+  const [addingNote, setAddingNote] = useState(false);
+
   // Derived data
   const detail = detailResponse?.detail;
   const queueKey = detail?.queue_key ?? "";
@@ -896,6 +917,45 @@ export default function CaseDetailPage() {
     executeAction(pendingAction, decisionNote, targetDate);
   }, [pendingAction, decisionNote, targetDate, executeAction]);
 
+  // Add note handler
+  const handleAddNote = useCallback(() => {
+    if (!caseType || !caseId || !noteText.trim()) return;
+
+    setAddingNote(true);
+    actionMutation.mutate(
+      {
+        doctype: caseType,
+        docname: caseId,
+        action_key: "add_note",
+        actor_role: userRoles[0] ?? "",
+        decision_note: noteText.trim(),
+      },
+      {
+        onSuccess: () => {
+          setNoteText("");
+          setAddingNote(false);
+          toast({
+            title: "Note added",
+            description: "Your note has been saved.",
+            variant: "success",
+          });
+          void queryClient.invalidateQueries({
+            queryKey: ["case-audit-timeline", caseType, caseId],
+          });
+          void refetchDetail();
+        },
+        onError: (err) => {
+          setAddingNote(false);
+          toast({
+            title: "Failed to add note",
+            description: err.message || "Something went wrong.",
+            variant: "error",
+          });
+        },
+      },
+    );
+  }, [caseType, caseId, noteText, userRoles, actionMutation, toast, queryClient, refetchDetail]);
+
   // ----- Loading -----
   if (detailLoading) {
     return <PageSkeleton />;
@@ -946,6 +1006,10 @@ export default function CaseDetailPage() {
               timelineEntries={timelineEntries}
               blockerReason={detailResponse?.blocker_banner?.reason}
               blockerMessage={detailResponse?.blocker_banner?.message}
+              noteText={noteText}
+              onNoteTextChange={setNoteText}
+              onAddNote={handleAddNote}
+              addingNote={addingNote}
             />
           )}
 

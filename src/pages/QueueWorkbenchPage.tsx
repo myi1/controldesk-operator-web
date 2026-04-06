@@ -3,11 +3,11 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { cn } from "../lib/cn";
 import { useUIStore } from "../stores/ui-store";
 import { useKeyboard } from "../hooks/use-keyboard";
+import { useUrlFilters } from "../hooks/use-url-filters";
 import { FilterBar } from "../components/patterns/FilterBar";
 import { QueueList } from "../components/patterns/QueueList";
 import { PreviewPanel } from "../components/patterns/PreviewPanel";
 import { STATUS_CONFIG } from "../config/status-config";
-import type { QueueFilters } from "../types/ui";
 import type { QueueRow } from "../types/api";
 
 /* ------------------------------------------------------------------ */
@@ -41,8 +41,8 @@ export default function QueueWorkbenchPage() {
   const navigate = useNavigate();
   const { queueKey, scopeName } = useQueueContext();
 
-  // Filters
-  const [filters, setFilters] = useState<QueueFilters>({});
+  // Filters (URL-synced — survives page refresh)
+  const [filters, setFilters] = useUrlFilters();
 
   // Preview panel state (from UI store)
   const previewOpen = useUIStore((s) => s.previewOpen);
