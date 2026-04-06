@@ -13,6 +13,8 @@ import { useToast } from "../components/patterns/NotificationToast";
 import { GuidedRunner } from "../components/patterns/GuidedRunner";
 import type { RunnerStep } from "../components/patterns/GuidedRunner";
 import { Button } from "../components/primitives/Button";
+import { ConfirmDialog } from "../components/composites/ConfirmDialog";
+import { ACTION_KEYS } from "../config/action-keys";
 import { Skeleton } from "../components/primitives/Skeleton";
 
 /* ------------------------------------------------------------------ */
@@ -205,6 +207,7 @@ export default function GuidedRunnerPage() {
   // Step state
   const [currentStep, setCurrentStep] = useState(0);
   const [dirty, setDirty] = useState(false);
+  const [exitDialogOpen, setExitDialogOpen] = useState(false);
 
   const handleStepComplete = useCallback(
     () => {
@@ -234,7 +237,7 @@ export default function GuidedRunnerPage() {
       {
         doctype: caseType,
         docname: caseId,
-        action_key: "complete_runner",
+        action_key: ACTION_KEYS.COMPLETE_RUNNER,
         actor_role: userRoles[0] ?? "",
         decision_note: "Completed via guided runner",
       },
@@ -260,10 +263,8 @@ export default function GuidedRunnerPage() {
 
   const handleExit = useCallback(() => {
     if (dirty) {
-      const confirmed = window.confirm(
-        "You have unsaved changes. Are you sure you want to exit?",
-      );
-      if (!confirmed) return;
+      setExitDialogOpen(true);
+      return;
     }
     navigate(-1);
   }, [dirty, navigate]);
@@ -323,6 +324,17 @@ export default function GuidedRunnerPage() {
           loading={actionMutation.isPending}
         />
       </div>
+
+      {/* Exit confirmation dialog */}
+      <ConfirmDialog
+        open={exitDialogOpen}
+        onOpenChange={setExitDialogOpen}
+        title="Exit runner?"
+        description="You have unsaved progress. Exiting now will lose any changes made since your last save."
+        confirmLabel="Exit"
+        confirmVariant="danger"
+        onConfirm={() => navigate(-1)}
+      />
     </div>
   );
 }
