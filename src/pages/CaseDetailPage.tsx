@@ -9,6 +9,7 @@ import {
   Send,
 } from "lucide-react";
 import { cn } from "../lib/cn";
+import { ACTION_KEYS } from "../config/action-keys";
 import { useCaseDetail, useCaseAuditTimeline } from "../hooks/use-case-detail";
 import { useAction } from "../hooks/use-action";
 import { useRoleGate } from "../hooks/use-role-gate";
@@ -820,6 +821,7 @@ export default function CaseDetailPage() {
 
   // Action execution state
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<ProtectedAction | null>(
     null,
   );
@@ -917,6 +919,31 @@ export default function CaseDetailPage() {
     executeAction(pendingAction, decisionNote, targetDate);
   }, [pendingAction, decisionNote, targetDate, executeAction]);
 
+  const handleConfirmDialogOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open && (decisionNote.trim() || targetDate)) {
+        // User is trying to close with unsaved content — ask first
+        setDiscardDialogOpen(true);
+        return;
+      }
+      setConfirmDialogOpen(open);
+      if (!open) {
+        setPendingAction(null);
+        setDecisionNote("");
+        setTargetDate("");
+      }
+    },
+    [decisionNote, targetDate],
+  );
+
+  const handleDiscardConfirm = useCallback(() => {
+    setDiscardDialogOpen(false);
+    setConfirmDialogOpen(false);
+    setPendingAction(null);
+    setDecisionNote("");
+    setTargetDate("");
+  }, []);
+
   // Add note handler
   const handleAddNote = useCallback(() => {
     if (!caseType || !caseId || !noteText.trim()) return;
@@ -926,7 +953,7 @@ export default function CaseDetailPage() {
       {
         doctype: caseType,
         docname: caseId,
-        action_key: "add_note",
+        action_key: ACTION_KEYS.ADD_NOTE,
         actor_role: userRoles[0] ?? "",
         decision_note: noteText.trim(),
       },
@@ -1045,7 +1072,7 @@ export default function CaseDetailPage() {
       {/* Confirm dialog */}
       <ConfirmDialog
         open={confirmDialogOpen}
-        onOpenChange={setConfirmDialogOpen}
+        onOpenChange={handleConfirmDialogOpenChange}
         title={pendingAction ? `Confirm: ${pendingAction.label}` : "Confirm Action"}
         description={
           pendingAction?.requires_human_release
@@ -1091,6 +1118,17 @@ export default function CaseDetailPage() {
           />
         </div>
       </ConfirmDialog>
+
+      {/* Discard changes dialog */}
+      <ConfirmDialog
+        open={discardDialogOpen}
+        onOpenChange={setDiscardDialogOpen}
+        title="Discard changes?"
+        description="Your decision note and target date will be lost. Are you sure you want to close?"
+        confirmLabel="Discard"
+        confirmVariant="danger"
+        onConfirm={handleDiscardConfirm}
+      />
     </div>
   );
 }

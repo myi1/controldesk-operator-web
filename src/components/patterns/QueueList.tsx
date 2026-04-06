@@ -8,6 +8,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
+import { ACTION_KEYS } from "../../config/action-keys";
 import { cn } from "../../lib/cn";
 import { useQueueRows } from "../../hooks/use-queue-rows";
 import { useKeyboard } from "../../hooks/use-keyboard";
@@ -117,16 +118,38 @@ export function QueueList({
         },
         {
           onSuccess: (result) => {
-            const failedCount = result.failed?.length ?? 0;
+            const failures = result.failed ?? [];
+            const failedCount = failures.length;
             const successCount = docnames.length - failedCount;
-            toast({
-              title: `${actionKey} completed`,
-              description:
-                failedCount > 0
-                  ? `${successCount} succeeded, ${failedCount} failed.`
-                  : `${successCount} item${successCount !== 1 ? "s" : ""} updated.`,
-              variant: failedCount > 0 ? "warning" : "success",
-            });
+
+            if (failedCount === 0) {
+              toast({
+                title: `${actionKey} applied`,
+                description: `${successCount} item${successCount !== 1 ? "s" : ""} updated.`,
+                variant: "success",
+              });
+            } else if (successCount === 0) {
+              // All failed — show first reason as a hint
+              const hint = failures[0]?.reason;
+              toast({
+                title: `${actionKey} failed`,
+                description: hint
+                  ? `All ${failedCount} items failed. First error: ${hint}`
+                  : `All ${failedCount} items could not be updated.`,
+                variant: "error",
+              });
+            } else {
+              // Partial — succeeded some, failed some
+              const hint = failures[0]?.reason;
+              toast({
+                title: `Partial success`,
+                description: hint
+                  ? `${successCount} updated, ${failedCount} failed. First error: ${hint}`
+                  : `${successCount} updated, ${failedCount} could not be processed.`,
+                variant: "warning",
+              });
+            }
+
             clear();
           },
           onError: (err) => {
@@ -434,9 +457,9 @@ export function QueueList({
       {selectedCount > 0 && (
         <BulkActionBar
           selectedCount={selectedCount}
-          onAssign={() => handleBulkAction("assign")}
-          onSnooze={() => handleBulkAction("snooze")}
-          onAcknowledge={() => handleBulkAction("acknowledge")}
+          onAssign={() => handleBulkAction(ACTION_KEYS.BULK_ASSIGN)}
+          onSnooze={() => handleBulkAction(ACTION_KEYS.BULK_SNOOZE)}
+          onAcknowledge={() => handleBulkAction(ACTION_KEYS.BULK_ACKNOWLEDGE)}
           onClear={clear}
         />
       )}
