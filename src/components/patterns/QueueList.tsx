@@ -326,7 +326,7 @@ export function QueueList({
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-0.5">
+      <div role="status" aria-live="polite" aria-label="Loading queue items" className="flex flex-col gap-0.5">
         {Array.from({ length: 8 }).map((_, i) => (
           <Skeleton key={i} variant="row" />
         ))}
@@ -348,10 +348,12 @@ export function QueueList({
   // Empty state
   if (rows.length === 0) {
     return (
-      <EmptyState
-        title="No items in queue"
-        description="There are no items matching your current filters."
-      />
+      <div role="status" aria-live="polite">
+        <EmptyState
+          title="No items in queue"
+          description="There are no items matching your current filters."
+        />
+      </div>
     );
   }
 
@@ -359,7 +361,7 @@ export function QueueList({
     <div className="flex flex-col">
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
+        <table className="w-full border-collapse" aria-label="Queue items">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr
@@ -368,9 +370,19 @@ export function QueueList({
               >
                 {headerGroup.headers.map((header) => {
                   const canSort = header.column.getCanSort();
+                  const sorted = header.column.getIsSorted();
+                  const ariaSort = canSort
+                    ? sorted === "asc"
+                      ? "ascending"
+                      : sorted === "desc"
+                        ? "descending"
+                        : "none"
+                    : undefined;
                   return (
                     <th
                       key={header.id}
+                      scope="col"
+                      aria-sort={ariaSort}
                       className={cn(
                         "px-2 py-2 text-left",
                         "text-[length:var(--text-caption-size)] leading-[var(--text-caption-leading)]",
@@ -386,7 +398,7 @@ export function QueueList({
                           ? null
                           : flexRender(header.column.columnDef.header, header.getContext())}
                         {canSort && (
-                          <SortIcon direction={header.column.getIsSorted()} />
+                          <SortIcon direction={sorted} />
                         )}
                       </div>
                     </th>
@@ -438,6 +450,7 @@ export function QueueList({
             Export
           </Button>
           <select
+            aria-label="Items per page"
             className={cn(
               "h-7 rounded-[var(--radius-sm)] border border-border-default bg-bg-surface px-2",
               "text-[length:var(--text-caption-size)] text-fg-default",
