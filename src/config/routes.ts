@@ -43,6 +43,8 @@ export type RoutePath = (typeof ROUTE_PATHS)[keyof typeof ROUTE_PATHS];
 // ---------------------------------------------------------------------------
 
 export function queuePath(queueKey: string): string {
+  if (queueKey === "my_work") return "/work";
+  if (queueKey === "intake_exceptions") return "/intake";
   return `/queue/${queueKey}`;
 }
 

@@ -7,6 +7,7 @@ import { CommandItem } from "../composites/CommandItem";
 import { useCommandPaletteStore } from "../../stores/command-palette-store";
 import { useKeyboard } from "../../hooks/use-keyboard";
 import { QUEUE_CONFIG } from "../../config/queue-config";
+import { queuePath } from "../../config/routes";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -18,16 +19,6 @@ interface PaletteResult {
   description?: string;
   group: string;
   path: string;
-}
-
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
-
-function queuePath(key: string): string {
-  if (key === "my_work") return "/work";
-  if (key === "intake_exceptions") return "/intake";
-  return `/queue/${key}`;
 }
 
 function buildQueueResults(): PaletteResult[] {

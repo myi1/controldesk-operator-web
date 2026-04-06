@@ -76,7 +76,7 @@ function sleep(ms: number): Promise<void> {
 
 async function doFetch(
   url: string,
-  params: Record<string, unknown>,
+  params: object,
   csrfToken: string,
 ): Promise<Response> {
   const controller = new AbortController();
@@ -143,7 +143,7 @@ async function parseSuccessBody<T>(res: Response, method: string): Promise<T> {
  */
 export async function frappeCall<T>(
   method: string,
-  params: Record<string, unknown> = {},
+  params: object = {},
 ): Promise<T> {
   const url = `${BASE_URL}/api/method/${method}`;
   let lastError: unknown;

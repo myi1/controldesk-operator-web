@@ -8,18 +8,8 @@ import { QueueCounter } from "../composites/QueueCounter";
 import { useUIStore } from "../../stores/ui-store";
 import { useBootstrap } from "../../hooks/use-bootstrap";
 import { QUEUE_CONFIG, type QueueConfigEntry } from "../../config/queue-config";
+import { queuePath } from "../../config/routes";
 import type { QueueGroup } from "../../types/enums";
-
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
-
-/** Map queue group to route prefix. Personal scopes use special paths. */
-function queuePath(entry: QueueConfigEntry): string {
-  if (entry.key === "my_work") return "/work";
-  if (entry.key === "intake_exceptions") return "/intake";
-  return `/queue/${entry.key}`;
-}
 
 const GROUP_LABELS: Record<QueueGroup, string> = {
   personal: "Personal Scopes",
@@ -81,7 +71,7 @@ const SidebarGroup = memo(function SidebarGroup({
             const item = (
               <NavLink
                 key={entry.key}
-                to={queuePath(entry)}
+                to={queuePath(entry.key)}
                 className="block"
               >
                 {({ isActive }) => (

@@ -31,6 +31,6 @@ export function executeBulkAction(
 ): Promise<BulkActionResponse> {
   return frappeCall<BulkActionResponse>(
     "controldesk_core.api.run_bulk_operator_action",
-    params as unknown as Record<string, unknown>,
+    params,
   );
 }

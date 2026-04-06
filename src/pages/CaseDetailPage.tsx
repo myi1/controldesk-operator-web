@@ -22,6 +22,13 @@ import type {
 } from "../types/api";
 import { queuePath } from "../config/routes";
 
+/** Default SLA budget in minutes (8 hours). Override per-field when the
+ *  backend supplies a custom budget value. */
+const DEFAULT_SLA_BUDGET_MINUTES = 480;
+
+/** Maximum character length enforced on case notes before submission. */
+const MAX_NOTE_LENGTH = 5000;
+
 import { DetailHeader } from "../components/patterns/DetailHeader";
 import { DetailTabBar } from "../components/patterns/DetailTabBar";
 import { ActivityTimeline } from "../components/patterns/ActivityTimeline";
@@ -278,8 +285,8 @@ function OverviewTab({
                   key={f.key}
                   label={f.label}
                   elapsed={elapsed}
-                  budget={480}
-                  breached={elapsed > 480}
+                  budget={DEFAULT_SLA_BUDGET_MINUTES}
+                  breached={elapsed > DEFAULT_SLA_BUDGET_MINUTES}
                   className="mb-2 last:mb-0"
                 />
               );
@@ -327,8 +334,10 @@ function OverviewTab({
           <textarea
             placeholder="Add a note..."
             rows={2}
+            maxLength={MAX_NOTE_LENGTH}
             value={noteText}
             onChange={(e) => onNoteTextChange(e.target.value)}
+            aria-label="Note text"
             className={cn(
               "w-full rounded-[var(--radius-md)] border border-border-default bg-bg-surface px-3 py-2",
               "text-[length:var(--text-small-size)] text-fg-default placeholder:text-fg-faint",
