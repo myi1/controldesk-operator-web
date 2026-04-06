@@ -7,7 +7,7 @@ import {
   createColumnHelper,
   type SortingState,
 } from "@tanstack/react-table";
-import { ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
+import { ArrowUp, ArrowDown, ChevronsUpDown, Download } from "lucide-react";
 import { ACTION_KEYS } from "../../config/action-keys";
 import { cn } from "../../lib/cn";
 import { useQueueRows } from "../../hooks/use-queue-rows";
@@ -61,6 +61,35 @@ function SortIcon({ direction }: { direction: false | "asc" | "desc" }) {
 /* ------------------------------------------------------------------ */
 
 const columnHelper = createColumnHelper<QueueRowType>();
+
+/* ------------------------------------------------------------------ */
+/*  CSV export helper                                                  */
+/* ------------------------------------------------------------------ */
+
+function exportToCsv(rows: QueueRowType[], filename: string) {
+  const headers = ["ID", "Title", "Status", "Owner", "Due Date"];
+  const escape = (v: string | null | undefined) => {
+    const s = String(v ?? "");
+    return s.includes(",") || s.includes('"') || s.includes("\n")
+      ? `"${s.replace(/"/g, '""')}"`
+      : s;
+  };
+  const lines = [
+    headers.join(","),
+    ...rows.map((r) =>
+      [r.docname, r.title, r.status, r.current_owner, r.target_date]
+        .map(escape)
+        .join(","),
+    ),
+  ];
+  const blob = new Blob([lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -394,6 +423,20 @@ export function QueueList({
           <span className="text-[length:var(--text-caption-size)] text-fg-muted">
             {totalCount} total
           </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={Download}
+            onClick={() =>
+              exportToCsv(
+                rows,
+                `${queueKey}-${new Date().toISOString().slice(0, 10)}.csv`,
+              )
+            }
+            aria-label="Export to CSV"
+          >
+            Export
+          </Button>
           <select
             className={cn(
               "h-7 rounded-[var(--radius-sm)] border border-border-default bg-bg-surface px-2",

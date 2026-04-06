@@ -1,14 +1,16 @@
 import { Suspense } from "react";
-import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "../lib/cn";
 import { TooltipProvider } from "../components/primitives/Tooltip";
 import { ToastProvider } from "../components/patterns/NotificationToast";
 import { TopBar } from "../components/patterns/TopBar";
 import { Sidebar } from "../components/patterns/Sidebar";
 import { CommandPalette } from "../components/patterns/CommandPalette";
+import { ShortcutsModal } from "../components/patterns/ShortcutsModal";
 import { Spinner } from "../components/primitives/Spinner";
 import { Button } from "../components/primitives/Button";
 import { useUIStore } from "../stores/ui-store";
+import { useKeyboard } from "../hooks/use-keyboard";
 import { useAuthCheck, AuthServiceUnavailableError } from "../hooks/use-auth-check";
 import { useSessionExpiry } from "../hooks/use-session-expiry";
 
@@ -22,11 +24,22 @@ function PageFallback() {
 
 export function AppShell() {
   const location = useLocation();
+  const navigate = useNavigate();
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
+  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const shortcutsOpen = useUIStore((s) => s.shortcutsOpen);
+  const setShortcutsOpen = useUIStore((s) => s.setShortcutsOpen);
   const { data: user, isLoading, isError, error } = useAuthCheck();
 
   // Redirect to /login (with ?next=) whenever any API call returns 401
   useSessionExpiry();
+
+  // Global keyboard shortcuts
+  useKeyboard([
+    { key: "mod+b", handler: toggleSidebar },
+    { key: "mod+,", handler: () => navigate("/settings") },
+    { key: "mod+/", handler: () => setShortcutsOpen(true) },
+  ]);
 
   // Show full-screen spinner while the initial auth check is in flight
   if (isLoading) {
@@ -105,8 +118,12 @@ export function AppShell() {
             </main>
           </div>
 
-          {/* Command palette (global overlay) */}
+          {/* Global overlays */}
           <CommandPalette />
+          <ShortcutsModal
+            open={shortcutsOpen}
+            onOpenChange={setShortcutsOpen}
+          />
         </div>
       </ToastProvider>
     </TooltipProvider>
