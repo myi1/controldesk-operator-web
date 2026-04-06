@@ -10,6 +10,6 @@ export function executeAction(
 ): Promise<ActionResponse> {
   return frappeCall<ActionResponse>(
     "controldesk_core.api.run_operator_case_action",
-    params as unknown as Record<string, unknown>,
+    params,
   );
 }
