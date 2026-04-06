@@ -916,7 +916,8 @@ export default function CaseDetailPage() {
 
   const handleConfirm = useCallback(() => {
     if (!pendingAction) return;
-    executeAction(pendingAction, decisionNote, targetDate);
+    // Trim whitespace so a note of "   " is treated as absent, not submitted.
+    executeAction(pendingAction, decisionNote.trim(), targetDate);
   }, [pendingAction, decisionNote, targetDate, executeAction]);
 
   const handleConfirmDialogOpenChange = useCallback(

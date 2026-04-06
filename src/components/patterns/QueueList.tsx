@@ -100,6 +100,12 @@ export function QueueList({
   // Selection store
   const { selectedIds, toggle, selectAll, clear, count: selectedCount } = useSelectionStore();
 
+  // Clear selections when the user switches queue or scope so docnames from a
+  // previous queue cannot bleed into bulk actions on the new queue.
+  useEffect(() => {
+    clear();
+  }, [queueKey, scopeName, clear]);
+
   // Bulk actions
   const bulkAction = useBulkAction();
   const { userRoles } = useRoleGate();
@@ -457,6 +463,7 @@ export function QueueList({
       {selectedCount > 0 && (
         <BulkActionBar
           selectedCount={selectedCount}
+          isPending={bulkAction.isPending}
           onAssign={() => handleBulkAction(ACTION_KEYS.BULK_ASSIGN)}
           onSnooze={() => handleBulkAction(ACTION_KEYS.BULK_SNOOZE)}
           onAcknowledge={() => handleBulkAction(ACTION_KEYS.BULK_ACKNOWLEDGE)}
