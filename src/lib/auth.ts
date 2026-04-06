@@ -1,52 +1,22 @@
 // ---------------------------------------------------------------------------
-// Token storage and session management for Frappe
+// Session management for Frappe — cookie-based, no credentials in localStorage
+//
+// Frappe sets an httpOnly session cookie on successful login. All subsequent
+// requests carry that cookie automatically (credentials: "include"). We do NOT
+// store any credentials or user identity in localStorage; the server is the
+// only source of truth for session validity.
 // ---------------------------------------------------------------------------
 
-const STORAGE_KEY = "controldesk_auth";
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
-interface StoredCredentials {
-  api_key: string;
-  api_secret: string;
-  user: string;
-}
-
-// ---- Credential persistence ----
-
-function readCredentials(): StoredCredentials | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as StoredCredentials;
-  } catch {
-    return null;
-  }
-}
-
-function writeCredentials(creds: StoredCredentials): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(creds));
-}
-
-function clearCredentials(): void {
-  localStorage.removeItem(STORAGE_KEY);
-}
-
-// ---- Public API ----
+// ---------------------------------------------------------------------------
+// Login
+// ---------------------------------------------------------------------------
 
 /**
- * Returns an Authorization header object when token credentials are stored.
- * If the session relies on cookies only, returns an empty object.
- */
-export function getAuthHeaders(): Record<string, string> {
-  const creds = readCredentials();
-  if (!creds) return {};
-  return { Authorization: `token ${creds.api_key}:${creds.api_secret}` };
-}
-
-/**
- * Log in via Frappe's built-in login endpoint.
- * On success Frappe sets session cookies; we also store the user identifier
- * so that `getCurrentUser()` works without an extra round-trip.
+ * Authenticate against Frappe's built-in login endpoint.
+ * On success Frappe sets a session cookie; no credentials are persisted
+ * on the client.
  */
 export async function login(
   email: string,
@@ -54,65 +24,99 @@ export async function login(
 ): Promise<{ user: string }> {
   const res = await fetch(`${BASE_URL}/api/method/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
     credentials: "include",
     body: JSON.stringify({ usr: email, pwd: password }),
   });
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(
-      (body as Record<string, string>).message ?? "Login failed",
-    );
+    const body = await res.json().catch(() => ({})) as Record<string, string>;
+    throw new Error(body.message ?? "Login failed. Please check your credentials.");
   }
 
   const data = (await res.json()) as { message: string; full_name?: string };
 
-  // Frappe responds with the user email in `message` on success
+  // Frappe responds with "Logged In" in `message` on success
   const user = data.message === "Logged In" ? email : data.message;
-
-  // Persist minimally so getCurrentUser works across refreshes
-  writeCredentials({ api_key: "", api_secret: "", user });
-
   return { user };
 }
 
-/**
- * Store explicit API key / secret credentials (e.g. from a settings page).
- */
-export function setTokenCredentials(
-  apiKey: string,
-  apiSecret: string,
-  user: string,
-): void {
-  writeCredentials({ api_key: apiKey, api_secret: apiSecret, user });
-}
+// ---------------------------------------------------------------------------
+// Logout
+// ---------------------------------------------------------------------------
 
 /**
- * Log out of the current Frappe session and clear stored credentials.
+ * Terminate the current Frappe session.
+ * The CSRF token is included so the backend accepts the POST.
  */
 export async function logout(): Promise<void> {
+  await fetch(`${BASE_URL}/api/method/logout`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Frappe-CSRF-Token": getCsrfToken(),
+    },
+    credentials: "include",
+  }).catch(() => {
+    // Best-effort — even if the network call fails, the client-side
+    // cleanup below will run so the user is redirected to login.
+  });
+}
+
+// ---------------------------------------------------------------------------
+// CSRF token — in-memory only, never persisted
+// ---------------------------------------------------------------------------
+//
+// Frappe embeds csrf_token in the HTML it serves. For a standalone SPA
+// we fetch it once after login from a lightweight bootstrap GET, then cache
+// it in a module-level variable for the lifetime of the page.
+//
+// Rotation: if any request receives a 403 we call refreshCsrfToken() to
+// re-fetch and retry (handled in api/client.ts).
+
+let _csrfToken = "";
+
+/** Return the cached CSRF token (empty string if not yet fetched). */
+export function getCsrfToken(): string {
+  return _csrfToken;
+}
+
+/** Store a new CSRF token (called by the API client on 403 retry). */
+export function setCsrfToken(token: string): void {
+  _csrfToken = token;
+}
+
+/**
+ * Fetch the CSRF token from Frappe and cache it.
+ *
+ * Frappe embeds `csrf_token = "…"` in its HTML shell. When the SPA is served
+ * through Frappe (the normal production setup) we parse it from the page body.
+ * In dev (Vite proxy) we fall back to an unauthenticated GET that returns a
+ * minimal HTML fragment containing the token.
+ */
+export async function fetchCsrfToken(): Promise<string> {
   try {
-    await fetch(`${BASE_URL}/api/method/logout`, {
-      method: "POST",
+    const res = await fetch(`${BASE_URL}/`, {
+      method: "GET",
       credentials: "include",
+      headers: { Accept: "text/html" },
     });
-  } finally {
-    clearCredentials();
+    const html = await res.text();
+    // Frappe injects:  csrf_token = "abc123"
+    const match = html.match(/csrf_token\s*=\s*["']([^"']{10,})["']/);
+    if (match?.[1]) {
+      _csrfToken = match[1];
+      return _csrfToken;
+    }
+  } catch {
+    // Non-fatal — requests will proceed without CSRF header and the backend
+    // will reject them with 403 if it requires the token, triggering a retry.
   }
+  return _csrfToken;
 }
 
-/**
- * Whether the client believes there is an active session.
- * This is a client-side heuristic only; the server may have expired the session.
- */
-export function isAuthenticated(): boolean {
-  return readCredentials() !== null;
-}
-
-/**
- * Return the email of the currently stored user, or `null` if not authenticated.
- */
-export function getCurrentUser(): string | null {
-  return readCredentials()?.user ?? null;
+/** Clear the cached CSRF token (on logout). */
+export function clearCsrfToken(): void {
+  _csrfToken = "";
 }
