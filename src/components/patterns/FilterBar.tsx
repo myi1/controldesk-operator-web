@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback } from "react";
-import { Plus, Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { Button } from "../primitives/Button";
 import { Select } from "../primitives/Select";
@@ -21,36 +21,38 @@ export interface FilterBarProps {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Debounced search sub-component                                     */
+/*  Debounced text input sub-component                                 */
 /* ------------------------------------------------------------------ */
 
 /**
- * Isolated search input that maintains its own local state.
- * When the parent `value` changes the component re-mounts via `key`
- * (handled by the parent) to reset the local value.
+ * Generic debounced text input. Maintains its own local state so every
+ * keystroke does not trigger a re-render of the parent. Parent resets
+ * the input via `key` prop when the external value changes.
  */
-function DebouncedSearch({
+function DebouncedInput({
   initialValue,
-  onSearch,
+  onCommit,
+  placeholder,
+  className,
+  icon: Icon,
 }: {
   initialValue: string;
-  onSearch: (value: string) => void;
+  onCommit: (value: string) => void;
+  placeholder: string;
+  className?: string;
+  icon?: React.ComponentType<{ size?: number; className?: string }>;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
       if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
-        onSearch(value);
-      }, 300);
+      timerRef.current = setTimeout(() => onCommit(value), 300);
     },
-    [onSearch],
+    [onCommit],
   );
 
-  // Cleanup debounce on unmount
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -58,18 +60,20 @@ function DebouncedSearch({
   }, []);
 
   return (
-    <div className="relative w-[200px]">
-      <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5">
-        <Search size={14} className="text-fg-faint" aria-hidden="true" />
-      </span>
+    <div className={cn("relative", className ?? "w-[180px]")}>
+      {Icon && (
+        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5">
+          <Icon size={14} className="text-fg-faint" />
+        </span>
+      )}
       <input
-        ref={inputRef}
         type="search"
-        placeholder="Search..."
+        placeholder={placeholder}
         defaultValue={initialValue}
         onChange={handleChange}
         className={cn(
-          "h-8 w-full rounded-[var(--radius-md)] border border-border-default bg-bg-surface pl-8 pr-3",
+          "h-8 w-full rounded-[var(--radius-md)] border border-border-default bg-bg-surface pr-3",
+          Icon ? "pl-8" : "pl-3",
           "text-[length:var(--text-small-size)] text-fg-default placeholder:text-fg-faint",
           "outline-none transition-[border-color,box-shadow] duration-[var(--duration-fast)]",
           "focus-visible:border-[var(--ring-focus)] focus-visible:shadow-[var(--shadow-focus)]",
@@ -96,6 +100,13 @@ export function FilterBar({
     [filters, onFiltersChange],
   );
 
+  const handleOwner = useCallback(
+    (value: string) => {
+      onFiltersChange({ ...filters, owner: value || undefined });
+    },
+    [filters, onFiltersChange],
+  );
+
   // Collect active filter chips
   const chips: { key: string; label: string; value: string }[] = [];
   if (filters.status) chips.push({ key: "status", label: "Status", value: filters.status });
@@ -112,6 +123,10 @@ export function FilterBar({
     else if (key === "escalation") next.escalation_state = undefined;
     else if (key === "overdue") next.only_overdue = undefined;
     onFiltersChange(next);
+  }
+
+  function clearAllFilters() {
+    onFiltersChange({});
   }
 
   const escalationOptions = ALL_ESCALATION_STATES.map((s) => ({
@@ -140,7 +155,7 @@ export function FilterBar({
             onValueChange={(v) =>
               onFiltersChange({ ...filters, status: v || undefined })
             }
-            className="w-[150px]"
+            className="w-[140px]"
           />
         )}
 
@@ -155,6 +170,15 @@ export function FilterBar({
               escalation_state: (v as EscalationState) || undefined,
             })
           }
+          className="w-[140px]"
+        />
+
+        {/* Owner filter — debounced text search */}
+        <DebouncedInput
+          key={filters.owner ?? "owner"}
+          initialValue={filters.owner ?? ""}
+          onCommit={handleOwner}
+          placeholder="Owner..."
           className="w-[150px]"
         />
 
@@ -170,25 +194,35 @@ export function FilterBar({
           }
         />
 
-        {/* Add filter button (placeholder for future filters) */}
-        <Button variant="ghost" size="sm" icon={Plus}>
-          Filter
-        </Button>
+        {/* Clear all — visible only when at least one filter is active */}
+        {chips.length > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={X}
+            onClick={clearAllFilters}
+          >
+            Clear
+          </Button>
+        )}
 
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Debounced search input — key resets when external value changes */}
-        <DebouncedSearch
-          key={filters.search_text ?? ""}
+        {/* Debounced search input */}
+        <DebouncedInput
+          key={filters.search_text ?? "search"}
           initialValue={filters.search_text ?? ""}
-          onSearch={handleSearch}
+          onCommit={handleSearch}
+          placeholder="Search..."
+          className="w-[200px]"
+          icon={Search}
         />
 
         {/* Count display */}
         {totalCount != null && (
           <span className="text-[length:var(--text-caption-size)] text-fg-muted whitespace-nowrap">
-            Showing {totalCount} items
+            {totalCount.toLocaleString()} items
           </span>
         )}
       </div>

@@ -17,6 +17,9 @@ export interface UIState {
 
   previewOpen: boolean;
   setPreviewOpen: (open: boolean) => void;
+
+  shortcutsOpen: boolean;
+  setShortcutsOpen: (open: boolean) => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -34,6 +37,9 @@ export const useUIStore = create<UIState>()(
 
       previewOpen: false,
       setPreviewOpen: (previewOpen) => set({ previewOpen }),
+
+      shortcutsOpen: false,
+      setShortcutsOpen: (shortcutsOpen) => set({ shortcutsOpen }),
     }),
     {
       name: "controldesk-ui",
