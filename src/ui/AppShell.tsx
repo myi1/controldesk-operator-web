@@ -9,6 +9,7 @@ import { CommandPalette } from "../components/patterns/CommandPalette";
 import { ShortcutsModal } from "../components/patterns/ShortcutsModal";
 import { Spinner } from "../components/primitives/Spinner";
 import { Button } from "../components/primitives/Button";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { useUIStore } from "../stores/ui-store";
 import { useKeyboard } from "../hooks/use-keyboard";
 import { useAuthCheck, AuthServiceUnavailableError } from "../hooks/use-auth-check";
@@ -112,9 +113,11 @@ export function AppShell() {
                   : "ml-[var(--sidebar-width)]",
               )}
             >
-              <Suspense fallback={<PageFallback />}>
-                <Outlet />
-              </Suspense>
+              <ErrorBoundary inline>
+                <Suspense fallback={<PageFallback />}>
+                  <Outlet />
+                </Suspense>
+              </ErrorBoundary>
             </main>
           </div>
 
