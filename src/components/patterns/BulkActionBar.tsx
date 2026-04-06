@@ -8,6 +8,8 @@ import { Button } from "../primitives/Button";
 
 export interface BulkActionBarProps {
   selectedCount: number;
+  /** True while a bulk mutation is in flight — disables action buttons. */
+  isPending?: boolean;
   onAssign: () => void;
   onSnooze: () => void;
   onAcknowledge: () => void;
@@ -20,6 +22,7 @@ export interface BulkActionBarProps {
 
 export function BulkActionBar({
   selectedCount,
+  isPending = false,
   onAssign,
   onSnooze,
   onAcknowledge,
@@ -49,21 +52,40 @@ export function BulkActionBar({
       {/* Divider */}
       <div className="h-5 w-px bg-border-default" />
 
-      {/* Action buttons */}
-      <Button variant="ghost" size="sm" icon={UserPlus} onClick={onAssign}>
+      {/* Action buttons — disabled while a mutation is in flight */}
+      <Button
+        variant="ghost"
+        size="sm"
+        icon={UserPlus}
+        onClick={onAssign}
+        disabled={isPending}
+        loading={isPending}
+      >
         Assign
       </Button>
-      <Button variant="ghost" size="sm" icon={Clock} onClick={onSnooze}>
+      <Button
+        variant="ghost"
+        size="sm"
+        icon={Clock}
+        onClick={onSnooze}
+        disabled={isPending}
+      >
         Snooze
       </Button>
-      <Button variant="ghost" size="sm" icon={Eye} onClick={onAcknowledge}>
+      <Button
+        variant="ghost"
+        size="sm"
+        icon={Eye}
+        onClick={onAcknowledge}
+        disabled={isPending}
+      >
         Acknowledge
       </Button>
 
       {/* Divider */}
       <div className="h-5 w-px bg-border-default" />
 
-      {/* Clear */}
+      {/* Clear — always enabled so user can deselect even during mutation */}
       <Button variant="ghost" size="sm" icon={X} onClick={onClear}>
         Clear
       </Button>
