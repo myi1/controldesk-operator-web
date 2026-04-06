@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, lazy, Suspense } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { cn } from "../lib/cn";
 import { useUIStore } from "../stores/ui-store";
@@ -6,7 +6,9 @@ import { useKeyboard } from "../hooks/use-keyboard";
 import { useUrlFilters } from "../hooks/use-url-filters";
 import { FilterBar } from "../components/patterns/FilterBar";
 import { QueueList } from "../components/patterns/QueueList";
-import { PreviewPanel } from "../components/patterns/PreviewPanel";
+const PreviewPanel = lazy(() =>
+  import("../components/patterns/PreviewPanel").then((m) => ({ default: m.PreviewPanel })),
+);
 import { STATUS_CONFIG } from "../config/status-config";
 import type { QueueRow } from "../types/api";
 
@@ -132,15 +134,17 @@ export default function QueueWorkbenchPage() {
         </div>
       </div>
 
-      {/* Preview panel */}
+      {/* Preview panel — lazy-loaded so it doesn't land in the initial bundle */}
       {previewOpen && selectedRowId && previewDoctype && (
-        <PreviewPanel
-          doctype={previewDoctype}
-          docname={selectedRowId}
-          queueKey={queueKey}
-          onClose={handleClosePreview}
-          onOpenDetail={handleOpenDetail}
-        />
+        <Suspense fallback={null}>
+          <PreviewPanel
+            doctype={previewDoctype}
+            docname={selectedRowId}
+            queueKey={queueKey}
+            onClose={handleClosePreview}
+            onOpenDetail={handleOpenDetail}
+          />
+        </Suspense>
       )}
     </div>
   );
