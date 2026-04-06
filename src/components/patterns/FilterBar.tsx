@@ -158,7 +158,7 @@ export function FilterBar({
             onValueChange={(v) =>
               onFiltersChange({ ...filters, status: v || undefined })
             }
-            className="w-[140px]"
+            className="w-full sm:w-[140px]"
           />
         )}
 
@@ -173,7 +173,7 @@ export function FilterBar({
               escalation_state: (v as EscalationState) || undefined,
             })
           }
-          className="w-[140px]"
+          className="w-full sm:w-[140px]"
         />
 
         {/* Owner filter — debounced text search */}
@@ -183,7 +183,7 @@ export function FilterBar({
           onCommit={handleOwner}
           placeholder="Owner..."
           ariaLabel="Filter by owner"
-          className="w-[150px]"
+          className="w-full sm:w-[150px]"
         />
 
         {/* Overdue toggle */}
@@ -220,7 +220,7 @@ export function FilterBar({
           onCommit={handleSearch}
           placeholder="Search..."
           ariaLabel="Search queue items"
-          className="w-[200px]"
+          className="w-full sm:w-[200px]"
           icon={Search}
         />
 

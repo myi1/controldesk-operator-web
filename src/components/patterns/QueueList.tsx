@@ -412,6 +412,10 @@ export function QueueList({
                         "font-[number:var(--text-caption-medium-weight)]",
                         "text-fg-muted",
                         canSort && "cursor-pointer select-none hover:text-fg-default",
+                        // Mirror the responsive visibility of matching <td> cells in QueueRow
+                        header.column.id === "context" && "hidden lg:table-cell",
+                        header.column.id === "current_owner" && "hidden md:table-cell",
+                        header.column.id === "target_date" && "hidden md:table-cell",
                       )}
                       style={{ width: header.getSize() }}
                       onClick={canSort ? header.column.getToggleSortingHandler() : undefined}

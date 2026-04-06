@@ -88,7 +88,7 @@ export function ShortcutsModal({ open, onOpenChange }: ShortcutsModalProps) {
         <Dialog.Content
           className={cn(
             "fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2",
-            "w-full max-w-lg max-h-[80vh]",
+            "w-[calc(100vw-2rem)] sm:w-full max-w-lg max-h-[80vh]",
             "bg-bg-default border border-border-default",
             "rounded-[var(--radius-lg)] shadow-lg",
             "flex flex-col",
