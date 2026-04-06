@@ -91,6 +91,7 @@ function FilterChipButton({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={cn(
         "px-2.5 py-1",
         "text-[length:var(--text-caption-size)] leading-[var(--text-caption-leading)]",

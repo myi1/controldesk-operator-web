@@ -14,9 +14,16 @@ export interface BulkActionParams {
   target_date?: string;
 }
 
+/** Per-item failure with a human-readable reason. */
+export interface BulkActionFailure {
+  docname: string;
+  reason: string;
+}
+
 export interface BulkActionResponse {
   results: ActionResponse[];
-  failed: string[];
+  /** Items that could not be processed, with per-item error reasons. */
+  failed: BulkActionFailure[];
 }
 
 export function executeBulkAction(

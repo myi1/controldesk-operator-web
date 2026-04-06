@@ -2,10 +2,11 @@
 // Queue rows API
 // ---------------------------------------------------------------------------
 
-import { frappeCall } from "./client";
+import { frappeCall, ApiSchemaError } from "./client";
+import { QueueRowsResponseSchema } from "./schemas";
 import type { QueueRowsParams, QueueRowsResponse } from "../types/api";
 
-export function fetchQueueRows(
+export async function fetchQueueRows(
   params: QueueRowsParams & { user_roles?: string[] },
 ): Promise<QueueRowsResponse> {
   // Frappe expects 1/0 for boolean flags
@@ -15,8 +16,14 @@ export function fetchQueueRows(
     mapped.only_overdue = only_overdue ? 1 : 0;
   }
 
-  return frappeCall<QueueRowsResponse>(
+  const raw = await frappeCall<unknown>(
     "controldesk_core.api.list_operator_queue_rows",
     mapped,
   );
+
+  const result = QueueRowsResponseSchema.safeParse(raw);
+  if (!result.success) {
+    throw new ApiSchemaError("list_operator_queue_rows", result.error);
+  }
+  return result.data;
 }

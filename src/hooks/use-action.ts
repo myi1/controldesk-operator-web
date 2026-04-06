@@ -13,8 +13,12 @@ export function useAction() {
     mutationFn: executeAction,
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: ["queue-rows"] });
+      void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
       void queryClient.invalidateQueries({
         queryKey: ["case-detail", variables.doctype, variables.docname],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["case-audit-timeline", variables.doctype, variables.docname],
       });
     },
   });

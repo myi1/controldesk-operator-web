@@ -17,6 +17,8 @@ export function useBulkAction() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["queue-rows"] });
       void queryClient.invalidateQueries({ queryKey: ["bootstrap"] });
+      // Invalidate all open audit timelines — bulk actions may affect any case
+      void queryClient.invalidateQueries({ queryKey: ["case-audit-timeline"] });
     },
   });
 }

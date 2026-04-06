@@ -19,7 +19,19 @@ export function useQueueRows(
   scopeName?: string,
 ) {
   return useQuery<QueueRowsResponse>({
-    queryKey: ["queue-rows", queueKey, scopeName, filters],
+    // Spread individual filter fields so the key is stable across object
+    // reference changes (TanStack Query compares keys by deep equality, but
+    // spreading avoids any surprise with extra/undefined fields in the future).
+    queryKey: [
+      "queue-rows",
+      queueKey,
+      scopeName,
+      filters.status,
+      filters.owner,
+      filters.escalation_state,
+      filters.only_overdue,
+      filters.search_text,
+    ],
     queryFn: () =>
       fetchQueueRows({
         queue_name: scopeName ? undefined : queueKey!,

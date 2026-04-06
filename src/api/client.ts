@@ -7,21 +7,22 @@ import type { FrappeResponse } from "../types/api";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
-/** Default timeout for every API request (30 seconds). */
+/** Hard cap on how long a single attempt may take (ms). */
 const REQUEST_TIMEOUT_MS = 30_000;
+
+/** Maximum number of retry attempts for transient errors. */
+const MAX_RETRIES = 3;
 
 // ---------------------------------------------------------------------------
 // Session expiry event
 // ---------------------------------------------------------------------------
-// Any module can listen for "controldesk:session-expired" on window to react
-// to a 401 response (e.g. redirect to login).
 
 export function emitSessionExpired(): void {
   window.dispatchEvent(new CustomEvent("controldesk:session-expired"));
 }
 
 // ---------------------------------------------------------------------------
-// Error type
+// Error types
 // ---------------------------------------------------------------------------
 
 export class ApiError extends Error {
@@ -34,100 +35,78 @@ export class ApiError extends Error {
   }
 }
 
+/** Thrown when the backend returns a shape that doesn't match our schema. */
+export class ApiSchemaError extends Error {
+  constructor(
+    method: string,
+    public cause: unknown,
+  ) {
+    super(`Unexpected response shape from ${method}`);
+    this.name = "ApiSchemaError";
+  }
+}
+
 // ---------------------------------------------------------------------------
-// Core fetch helper
+// Retry helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Invoke a Frappe whitelisted RPC method.
- *
- * @param method  Dotted method path, e.g. `controldesk_core.api.get_operator_shell_bootstrap`
- * @param params  JSON-serialisable params forwarded in the request body
- * @returns       The unwrapped `message` payload from the Frappe response envelope
- */
-export async function frappeCall<T>(
-  method: string,
-  params: Record<string, unknown> = {},
-): Promise<T> {
-  const url = `${BASE_URL}/api/method/${method}`;
+/** True for errors worth retrying (transient network / server-side). */
+function isRetryable(err: unknown): boolean {
+  if (err instanceof ApiError) {
+    // Timeout, network down, or 5xx server errors
+    return err.httpStatus === 0 || err.httpStatus === 408 || err.httpStatus >= 500;
+  }
+  return false;
+}
 
-  // Abort the request after REQUEST_TIMEOUT_MS
+/** Exponential backoff delay in ms with ±30% jitter. */
+function backoffDelay(attempt: number): number {
+  const base = Math.min(1000 * 2 ** attempt, 16_000); // cap at 16s
+  const jitter = base * 0.3 * (Math.random() * 2 - 1);
+  return Math.max(0, base + jitter);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// ---------------------------------------------------------------------------
+// Core fetch (single attempt)
+// ---------------------------------------------------------------------------
+
+async function doFetch(
+  url: string,
+  params: Record<string, unknown>,
+  csrfToken: string,
+): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  let res: Response;
-
   try {
-    res = await fetch(url, {
+    const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        // CSRF token required by Frappe for all session-authenticated POSTs
-        "X-Frappe-CSRF-Token": getCsrfToken(),
+        "X-Frappe-CSRF-Token": csrfToken,
       },
       credentials: "include",
       body: JSON.stringify(params),
       signal: controller.signal,
     });
+    return res;
   } catch (err) {
-    clearTimeout(timeoutId);
     if ((err as Error).name === "AbortError") {
       throw new ApiError("Request timed out. Please try again.", 408);
     }
     throw new ApiError("Network error. Please check your connection.", 0);
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  clearTimeout(timeoutId);
-
-  // 401 — session has expired or was never established
-  if (res.status === 401) {
-    emitSessionExpired();
-    throw new ApiError("Your session has expired. Please sign in again.", 401);
-  }
-
-  // 403 — could be a stale CSRF token; fetch a fresh one and retry once
-  if (res.status === 403) {
-    const freshToken = await fetchCsrfToken();
-    if (freshToken) {
-      // Retry with the refreshed token
-      const retryRes = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          "X-Frappe-CSRF-Token": freshToken,
-        },
-        credentials: "include",
-        body: JSON.stringify(params),
-      });
-
-      if (retryRes.status === 401) {
-        emitSessionExpired();
-        throw new ApiError("Your session has expired. Please sign in again.", 401);
-      }
-
-      if (!retryRes.ok) {
-        throw new ApiError(await extractErrorMessage(retryRes), retryRes.status);
-      }
-
-      const retryBody = (await retryRes.json()) as FrappeResponse<T>;
-      return retryBody.message;
-    }
-
-    throw new ApiError("Permission denied.", 403);
-  }
-
-  if (!res.ok) {
-    throw new ApiError(await extractErrorMessage(res), res.status);
-  }
-
-  const body = (await res.json()) as FrappeResponse<T>;
-  return body.message;
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Response parsing helpers
 // ---------------------------------------------------------------------------
 
 async function extractErrorMessage(res: Response): Promise<string> {
@@ -136,7 +115,105 @@ async function extractErrorMessage(res: Response): Promise<string> {
     if (body.message) return body.message;
     if (body.exc) return body.exc;
   } catch {
-    // Response body was not JSON — fall through to generic message
+    // Body is not JSON — use generic status message
   }
   return `HTTP ${res.status}`;
+}
+
+async function parseSuccessBody<T>(res: Response, method: string): Promise<T> {
+  let body: FrappeResponse<T>;
+  try {
+    body = (await res.json()) as FrappeResponse<T>;
+  } catch {
+    throw new ApiSchemaError(method, new Error("Response body was not valid JSON"));
+  }
+  if (!("message" in body)) {
+    throw new ApiSchemaError(method, new Error("Response missing 'message' envelope"));
+  }
+  return body.message;
+}
+
+// ---------------------------------------------------------------------------
+// Public API call with retry
+// ---------------------------------------------------------------------------
+
+/**
+ * Invoke a Frappe whitelisted RPC method with automatic retry on transient
+ * errors, CSRF refresh on 403, and session-expiry signalling on 401.
+ */
+export async function frappeCall<T>(
+  method: string,
+  params: Record<string, unknown> = {},
+): Promise<T> {
+  const url = `${BASE_URL}/api/method/${method}`;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      await sleep(backoffDelay(attempt - 1));
+    }
+
+    let res: Response;
+    try {
+      res = await doFetch(url, params, getCsrfToken());
+    } catch (err) {
+      lastError = err;
+      if (isRetryable(err)) continue;
+      throw err;
+    }
+
+    // 401 — expired session, no point retrying
+    if (res.status === 401) {
+      emitSessionExpired();
+      throw new ApiError("Your session has expired. Please sign in again.", 401);
+    }
+
+    // 403 — possibly stale CSRF token; refresh and retry this attempt (once)
+    if (res.status === 403) {
+      const freshToken = await fetchCsrfToken();
+      if (freshToken) {
+        let retryRes: Response;
+        try {
+          retryRes = await doFetch(url, params, freshToken);
+        } catch (err) {
+          lastError = err;
+          if (isRetryable(err)) continue;
+          throw err;
+        }
+
+        if (retryRes.status === 401) {
+          emitSessionExpired();
+          throw new ApiError("Your session has expired. Please sign in again.", 401);
+        }
+
+        if (retryRes.status === 403) {
+          throw new ApiError("Permission denied.", 403);
+        }
+
+        if (!retryRes.ok) {
+          const msg = await extractErrorMessage(retryRes);
+          const err = new ApiError(msg, retryRes.status);
+          if (isRetryable(err)) { lastError = err; continue; }
+          throw err;
+        }
+
+        return parseSuccessBody<T>(retryRes, method);
+      }
+
+      throw new ApiError("Permission denied.", 403);
+    }
+
+    // Other non-OK responses
+    if (!res.ok) {
+      const msg = await extractErrorMessage(res);
+      const err = new ApiError(msg, res.status);
+      if (isRetryable(err)) { lastError = err; continue; }
+      throw err;
+    }
+
+    return parseSuccessBody<T>(res, method);
+  }
+
+  // All retries exhausted
+  throw lastError ?? new ApiError("Request failed after multiple attempts.", 0);
 }

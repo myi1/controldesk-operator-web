@@ -32,10 +32,14 @@ export default function LoginPage() {
         await fetchCsrfToken();
         // Clear all cached queries so bootstrap re-fetches with the new session
         queryClient.clear();
-        // Honour redirect-after-login if present in the URL (?next=/queue/…)
+        // Honour redirect-after-login if present in the URL (?next=/queue/…).
+        // Only allow same-origin relative paths; block protocol-relative URLs
+        // (//attacker.com) which could bypass the startsWith("/") check.
         const params = new URLSearchParams(window.location.search);
         const next = params.get("next");
-        navigate(next && next.startsWith("/") ? next : "/", { replace: true });
+        const isSafeRedirect =
+          !!next && next.startsWith("/") && !next.startsWith("//");
+        navigate(isSafeRedirect ? next : "/", { replace: true });
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "An unexpected error occurred",

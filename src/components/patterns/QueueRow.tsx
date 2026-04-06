@@ -54,9 +54,17 @@ export const QueueRow = memo(function QueueRow({
         isSelected && "bg-accent-primary-subtle",
         isActive && !isSelected && "bg-bg-active",
         !isSelected && !isActive && "hover:bg-bg-hover",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring-focus)] focus-visible:ring-inset",
       )}
+      tabIndex={0}
+      aria-label={`${row.title} — ${row.status}`}
+      aria-selected={isSelected}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") { e.preventDefault(); onClick(); }
+        if (e.key === " ") { e.preventDefault(); onSelect(); }
+      }}
       data-active={isActive || undefined}
     >
       {/* Selection checkbox */}
