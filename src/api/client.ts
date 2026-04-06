@@ -2,6 +2,7 @@
 // Base Frappe RPC client
 // ---------------------------------------------------------------------------
 
+import { z } from "zod";
 import { getCsrfToken, fetchCsrfToken } from "../lib/auth";
 import type { FrappeResponse } from "../types/api";
 
@@ -41,7 +42,15 @@ export class ApiSchemaError extends Error {
     method: string,
     public cause: unknown,
   ) {
-    super(`Unexpected response shape from ${method}`);
+    const detail =
+      cause instanceof z.ZodError
+        ? ": " +
+          cause.issues
+            .slice(0, 3)
+            .map((i) => `${i.path.join(".")}: ${i.message}`)
+            .join("; ")
+        : "";
+    super(`Unexpected response shape from ${method}${detail}`);
     this.name = "ApiSchemaError";
   }
 }

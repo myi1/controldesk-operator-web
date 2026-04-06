@@ -58,9 +58,10 @@ export async function logout(): Promise<void> {
       "X-Frappe-CSRF-Token": getCsrfToken(),
     },
     credentials: "include",
-  }).catch(() => {
+  }).catch((err: unknown) => {
     // Best-effort — even if the network call fails, the client-side
     // cleanup below will run so the user is redirected to login.
+    console.warn("[auth] Logout request failed (session may still be active on server):", err);
   });
 }
 
@@ -109,9 +110,10 @@ export async function fetchCsrfToken(): Promise<string> {
       _csrfToken = match[1];
       return _csrfToken;
     }
-  } catch {
+  } catch (err) {
     // Non-fatal — requests will proceed without CSRF header and the backend
     // will reject them with 403 if it requires the token, triggering a retry.
+    console.warn("[auth] CSRF token fetch failed:", err);
   }
   return _csrfToken;
 }

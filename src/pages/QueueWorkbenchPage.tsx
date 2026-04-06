@@ -4,6 +4,7 @@ import { cn } from "../lib/cn";
 import { useUIStore } from "../stores/ui-store";
 import { useKeyboard } from "../hooks/use-keyboard";
 import { useUrlFilters } from "../hooks/use-url-filters";
+import { ErrorBoundary } from "../ui/ErrorBoundary";
 import { FilterBar } from "../components/patterns/FilterBar";
 import { QueueList } from "../components/patterns/QueueList";
 const PreviewPanel = lazy(() =>
@@ -134,17 +135,20 @@ export default function QueueWorkbenchPage() {
         </div>
       </div>
 
-      {/* Preview panel — lazy-loaded so it doesn't land in the initial bundle */}
+      {/* Preview panel — lazy-loaded; ErrorBoundary ensures a load failure
+          doesn't crash the workbench, just collapses the panel gracefully */}
       {previewOpen && selectedRowId && previewDoctype && (
-        <Suspense fallback={null}>
-          <PreviewPanel
-            doctype={previewDoctype}
-            docname={selectedRowId}
-            queueKey={queueKey}
-            onClose={handleClosePreview}
-            onOpenDetail={handleOpenDetail}
-          />
-        </Suspense>
+        <ErrorBoundary inline>
+          <Suspense fallback={null}>
+            <PreviewPanel
+              doctype={previewDoctype}
+              docname={selectedRowId}
+              queueKey={queueKey}
+              onClose={handleClosePreview}
+              onOpenDetail={handleOpenDetail}
+            />
+          </Suspense>
+        </ErrorBoundary>
       )}
     </div>
   );

@@ -3,6 +3,9 @@ import { AlertTriangle, RotateCcw } from "lucide-react";
 
 interface Props {
   children: ReactNode;
+  /** When true, renders a compact error banner instead of a full-screen takeover.
+   *  Use this for page/section-level boundaries so the shell (nav, sidebar) stays visible. */
+  inline?: boolean;
 }
 
 interface State {
@@ -26,6 +29,25 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      if (this.props.inline) {
+        return (
+          <div className="flex h-[50vh] flex-col items-center justify-center gap-3 px-6 text-center">
+            <AlertTriangle size={32} className="text-status-warning" aria-hidden />
+            <p className="max-w-sm text-sm text-fg-muted">
+              {this.state.error?.message || "This page could not be loaded."}
+            </p>
+            <button
+              type="button"
+              onClick={this.handleReset}
+              className="inline-flex items-center gap-2 rounded-lg border border-border-default bg-bg-surface px-3 py-1.5 text-sm font-medium text-fg-default hover:bg-bg-surface-hover transition-colors cursor-pointer"
+            >
+              <RotateCcw size={14} aria-hidden />
+              Try again
+            </button>
+          </div>
+        );
+      }
+
       return (
         <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-bg-app px-6 text-center">
           <AlertTriangle size={48} className="text-status-warning" aria-hidden />
