@@ -1,0 +1,211 @@
+import { useRef, useEffect, useCallback } from "react";
+import { Plus, Search } from "lucide-react";
+import { cn } from "../../lib/cn";
+import { Button } from "../primitives/Button";
+import { Select } from "../primitives/Select";
+import { Toggle } from "../primitives/Toggle";
+import { FilterChip } from "../composites/FilterChip";
+import { ALL_ESCALATION_STATES, type EscalationState } from "../../types/enums";
+import type { QueueFilters } from "../../types/ui";
+
+/* ------------------------------------------------------------------ */
+/*  Types                                                              */
+/* ------------------------------------------------------------------ */
+
+export interface FilterBarProps {
+  filters: QueueFilters;
+  onFiltersChange: (filters: QueueFilters) => void;
+  statusOptions?: string[];
+  queueKey?: string;
+  totalCount?: number;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Debounced search sub-component                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Isolated search input that maintains its own local state.
+ * When the parent `value` changes the component re-mounts via `key`
+ * (handled by the parent) to reset the local value.
+ */
+function DebouncedSearch({
+  initialValue,
+  onSearch,
+}: {
+  initialValue: string;
+  onSearch: (value: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
+
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        onSearch(value);
+      }, 300);
+    },
+    [onSearch],
+  );
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  return (
+    <div className="relative w-[200px]">
+      <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5">
+        <Search size={14} className="text-fg-faint" aria-hidden="true" />
+      </span>
+      <input
+        ref={inputRef}
+        type="search"
+        placeholder="Search..."
+        defaultValue={initialValue}
+        onChange={handleChange}
+        className={cn(
+          "h-8 w-full rounded-[var(--radius-md)] border border-border-default bg-bg-surface pl-8 pr-3",
+          "text-[length:var(--text-small-size)] text-fg-default placeholder:text-fg-faint",
+          "outline-none transition-[border-color,box-shadow] duration-[var(--duration-fast)]",
+          "focus-visible:border-[var(--ring-focus)] focus-visible:shadow-[var(--shadow-focus)]",
+        )}
+      />
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Component                                                          */
+/* ------------------------------------------------------------------ */
+
+export function FilterBar({
+  filters,
+  onFiltersChange,
+  statusOptions = [],
+  totalCount,
+}: FilterBarProps) {
+  const handleSearch = useCallback(
+    (value: string) => {
+      onFiltersChange({ ...filters, search_text: value || undefined });
+    },
+    [filters, onFiltersChange],
+  );
+
+  // Collect active filter chips
+  const chips: { key: string; label: string; value: string }[] = [];
+  if (filters.status) chips.push({ key: "status", label: "Status", value: filters.status });
+  if (filters.owner) chips.push({ key: "owner", label: "Owner", value: filters.owner });
+  if (filters.escalation_state) {
+    chips.push({ key: "escalation", label: "Escalation", value: filters.escalation_state });
+  }
+  if (filters.only_overdue) chips.push({ key: "overdue", label: "Overdue", value: "Yes" });
+
+  function removeFilter(key: string) {
+    const next = { ...filters };
+    if (key === "status") next.status = undefined;
+    else if (key === "owner") next.owner = undefined;
+    else if (key === "escalation") next.escalation_state = undefined;
+    else if (key === "overdue") next.only_overdue = undefined;
+    onFiltersChange(next);
+  }
+
+  const escalationOptions = ALL_ESCALATION_STATES.map((s) => ({
+    value: s,
+    label: s.charAt(0).toUpperCase() + s.slice(1),
+  }));
+
+  const statusSelectOptions = statusOptions.map((s) => ({
+    value: s,
+    label: s
+      .split("_")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" "),
+  }));
+
+  return (
+    <div className="flex flex-col gap-2">
+      {/* Main filter row */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Status filter */}
+        {statusSelectOptions.length > 0 && (
+          <Select
+            placeholder="Status"
+            options={statusSelectOptions}
+            value={filters.status}
+            onValueChange={(v) =>
+              onFiltersChange({ ...filters, status: v || undefined })
+            }
+            className="w-[150px]"
+          />
+        )}
+
+        {/* Escalation filter */}
+        <Select
+          placeholder="Escalation"
+          options={escalationOptions}
+          value={filters.escalation_state}
+          onValueChange={(v) =>
+            onFiltersChange({
+              ...filters,
+              escalation_state: (v as EscalationState) || undefined,
+            })
+          }
+          className="w-[150px]"
+        />
+
+        {/* Overdue toggle */}
+        <Toggle
+          label="Overdue"
+          checked={filters.only_overdue ?? false}
+          onCheckedChange={(checked) =>
+            onFiltersChange({
+              ...filters,
+              only_overdue: checked || undefined,
+            })
+          }
+        />
+
+        {/* Add filter button (placeholder for future filters) */}
+        <Button variant="ghost" size="sm" icon={Plus}>
+          Filter
+        </Button>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Debounced search input — key resets when external value changes */}
+        <DebouncedSearch
+          key={filters.search_text ?? ""}
+          initialValue={filters.search_text ?? ""}
+          onSearch={handleSearch}
+        />
+
+        {/* Count display */}
+        {totalCount != null && (
+          <span className="text-[length:var(--text-caption-size)] text-fg-muted whitespace-nowrap">
+            Showing {totalCount} items
+          </span>
+        )}
+      </div>
+
+      {/* Active filter chips */}
+      {chips.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {chips.map((chip) => (
+            <FilterChip
+              key={chip.key}
+              label={chip.label}
+              value={chip.value}
+              onRemove={() => removeFilter(chip.key)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,114 @@
+/* ControlDesk Design Tokens — Colors */
+
+:root {
+  /* Surface tokens — Light */
+  --bg-app: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-surface-raised: #ffffff;
+  --bg-surface-inset: #f1f5f9;
+  --bg-sidebar: #fafbfc;
+  --bg-hover: #f1f5f9;
+  --bg-active: #eff6ff;
+
+  /* Foreground tokens — Light */
+  --fg-default: #0f172a;
+  --fg-muted: #64748b;
+  --fg-faint: #94a3b8;
+  --fg-on-emphasis: #ffffff;
+
+  /* Border tokens — Light */
+  --border-default: #e2e8f0;
+  --border-muted: #f1f5f9;
+  --border-emphasis: #cbd5e1;
+  --ring-focus: #2563eb;
+
+  /* Accent — Light */
+  --accent-primary: #2563eb;
+  --accent-primary-hover: #1d4ed8;
+  --accent-primary-subtle: #eff6ff;
+
+  /* Status — Light */
+  --status-success: #059669;
+  --status-success-subtle: #ecfdf5;
+  --status-warning: #d97706;
+  --status-warning-subtle: #fffbeb;
+  --status-danger: #dc2626;
+  --status-danger-subtle: #fef2f2;
+  --status-info: #0284c7;
+  --status-info-subtle: #f0f9ff;
+  --status-neutral: #64748b;
+  --status-neutral-subtle: #f1f5f9;
+
+  /* Escalation — Light */
+  --escalation-normal: #059669;
+  --escalation-blocked: #d97706;
+  --escalation-escalated: #dc2626;
+  --sla-healthy: #059669;
+  --sla-at-risk: #d97706;
+  --sla-breached: #dc2626;
+
+  /* Queue Family Colors */
+  --queue-onboarding: #6366f1;
+  --queue-vacancy: #7c3aed;
+  --queue-maintenance: #d97706;
+  --queue-receivables: #dc2626;
+  --queue-renewals: #0d9488;
+  --queue-moveout: #475569;
+  --queue-reporting: #0284c7;
+  --queue-service-recovery: #e11d48;
+  --queue-commercial-intake: #059669;
+  --queue-approvals: #2563eb;
+  --queue-integration-sync: #0891b2;
+  --queue-documents: #78716c;
+  --queue-handoffs: #9333ea;
+  --queue-escalations: #ea580c;
+  --queue-sla-watch: #db2777;
+}
+
+[data-theme="dark"] {
+  /* Surface tokens — Dark */
+  --bg-app: #0b0f1a;
+  --bg-surface: #111827;
+  --bg-surface-raised: #1e293b;
+  --bg-surface-inset: #0f172a;
+  --bg-sidebar: #0d1117;
+  --bg-hover: #1e293b;
+  --bg-active: #172554;
+
+  /* Foreground tokens — Dark */
+  --fg-default: #f1f5f9;
+  --fg-muted: #94a3b8;
+  --fg-faint: #64748b;
+  --fg-on-emphasis: #ffffff;
+
+  /* Border tokens — Dark */
+  --border-default: #1e293b;
+  --border-muted: #1e293b;
+  --border-emphasis: #334155;
+  --ring-focus: #3b82f6;
+
+  /* Accent — Dark */
+  --accent-primary: #3b82f6;
+  --accent-primary-hover: #2563eb;
+  --accent-primary-subtle: #172554;
+
+  /* Status — Dark */
+  --status-success: #10b981;
+  --status-success-subtle: #064e3b;
+  --status-warning: #f59e0b;
+  --status-warning-subtle: #78350f;
+  --status-danger: #ef4444;
+  --status-danger-subtle: #7f1d1d;
+  --status-info: #38bdf8;
+  --status-info-subtle: #0c4a6e;
+  --status-neutral: #94a3b8;
+  --status-neutral-subtle: #1e293b;
+
+  /* Escalation — Dark */
+  --escalation-normal: #10b981;
+  --escalation-blocked: #f59e0b;
+  --escalation-escalated: #ef4444;
+  --sla-healthy: #10b981;
+  --sla-at-risk: #f59e0b;
+  --sla-breached: #ef4444;
+}

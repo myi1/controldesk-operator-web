@@ -1,0 +1,31 @@
+/* ControlDesk Design Tokens — Layout */
+
+:root {
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  /* Z-index scale */
+  --z-base: 0;
+  --z-raised: 10;
+  --z-sidebar: 20;
+  --z-topbar: 30;
+  --z-dropdown: 40;
+  --z-modal-backdrop: 50;
+  --z-modal: 60;
+  --z-toast: 70;
+  --z-tooltip: 80;
+  --z-command-palette: 90;
+
+  /* Layout dimensions */
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 56px;
+  --topbar-height: 48px;
+  --preview-panel-width: 420px;
+  --detail-max-width: 960px;
+  --queue-row-compact-height: 48px;
+  --queue-row-comfortable-height: 64px;
+}
