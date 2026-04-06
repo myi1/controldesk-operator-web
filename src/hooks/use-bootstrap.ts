@@ -11,5 +11,6 @@ export function useBootstrap() {
     queryKey: ["bootstrap"],
     queryFn: () => fetchBootstrap(),
     staleTime: 30_000,
+    refetchInterval: 30_000,
   });
 }

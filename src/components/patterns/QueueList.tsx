@@ -11,6 +11,8 @@ import { ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { useQueueRows } from "../../hooks/use-queue-rows";
 import { useKeyboard } from "../../hooks/use-keyboard";
+import { useBulkAction } from "../../hooks/use-bulk-action";
+import { useRoleGate } from "../../hooks/use-role-gate";
 import { useUIStore } from "../../stores/ui-store";
 import { useSelectionStore } from "../../stores/selection-store";
 import { Checkbox } from "../primitives/Checkbox";
@@ -18,6 +20,7 @@ import { Button } from "../primitives/Button";
 import { Skeleton } from "../primitives/Skeleton";
 import { EmptyState } from "../composites/EmptyState";
 import { ErrorBanner } from "../composites/ErrorBanner";
+import { useToast } from "./NotificationToast";
 import { QueueRow } from "./QueueRow";
 import { BulkActionBar } from "./BulkActionBar";
 import type { QueueRow as QueueRowType } from "../../types/api";
@@ -95,6 +98,49 @@ export function QueueList({
 
   // Selection store
   const { selectedIds, toggle, selectAll, clear, count: selectedCount } = useSelectionStore();
+
+  // Bulk actions
+  const bulkAction = useBulkAction();
+  const { userRoles } = useRoleGate();
+  const { toast } = useToast();
+
+  const handleBulkAction = useCallback(
+    (actionKey: string) => {
+      const docnames = Array.from(selectedIds);
+      if (docnames.length === 0) return;
+
+      bulkAction.mutate(
+        {
+          action_key: actionKey,
+          docnames,
+          actor_role: userRoles[0] ?? "",
+        },
+        {
+          onSuccess: (result) => {
+            const failedCount = result.failed?.length ?? 0;
+            const successCount = docnames.length - failedCount;
+            toast({
+              title: `${actionKey} completed`,
+              description:
+                failedCount > 0
+                  ? `${successCount} succeeded, ${failedCount} failed.`
+                  : `${successCount} item${successCount !== 1 ? "s" : ""} updated.`,
+              variant: failedCount > 0 ? "warning" : "success",
+            });
+            clear();
+          },
+          onError: (err) => {
+            toast({
+              title: `Bulk ${actionKey} failed`,
+              description: err.message || "Something went wrong.",
+              variant: "error",
+            });
+          },
+        },
+      );
+    },
+    [selectedIds, bulkAction, userRoles, toast, clear],
+  );
 
   // UI store
   const selectedRowId = useUIStore((s) => s.selectedRowId);
@@ -388,15 +434,9 @@ export function QueueList({
       {selectedCount > 0 && (
         <BulkActionBar
           selectedCount={selectedCount}
-          onAssign={() => {
-            /* TODO: wire bulk assign */
-          }}
-          onSnooze={() => {
-            /* TODO: wire bulk snooze */
-          }}
-          onAcknowledge={() => {
-            /* TODO: wire bulk acknowledge */
-          }}
+          onAssign={() => handleBulkAction("assign")}
+          onSnooze={() => handleBulkAction("snooze")}
+          onAcknowledge={() => handleBulkAction("acknowledge")}
           onClear={clear}
         />
       )}
