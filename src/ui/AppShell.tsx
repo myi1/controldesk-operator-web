@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { cn } from "../lib/cn";
 import { TooltipProvider } from "../components/primitives/Tooltip";
 import { ToastProvider } from "../components/patterns/NotificationToast";
@@ -7,8 +7,9 @@ import { TopBar } from "../components/patterns/TopBar";
 import { Sidebar } from "../components/patterns/Sidebar";
 import { CommandPalette } from "../components/patterns/CommandPalette";
 import { Spinner } from "../components/primitives/Spinner";
+import { Button } from "../components/primitives/Button";
 import { useUIStore } from "../stores/ui-store";
-import { useAuthCheck } from "../hooks/use-auth-check";
+import { useAuthCheck, AuthServiceUnavailableError } from "../hooks/use-auth-check";
 import { useSessionExpiry } from "../hooks/use-session-expiry";
 
 function PageFallback() {
@@ -20,24 +21,54 @@ function PageFallback() {
 }
 
 export function AppShell() {
+  const location = useLocation();
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
-  const { data: user, isLoading, isError } = useAuthCheck();
+  const { data: user, isLoading, isError, error } = useAuthCheck();
 
   // Redirect to /login (with ?next=) whenever any API call returns 401
   useSessionExpiry();
 
-  // Redirect to login if not authenticated
-  if (isError || (!isLoading && !user)) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // Show loading spinner while checking auth
+  // Show full-screen spinner while the initial auth check is in flight
   if (isLoading) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-bg-app">
         <Spinner size="lg" />
       </div>
     );
+  }
+
+  // If the auth service itself is down (5xx / network), show an error banner
+  // rather than redirecting to /login — login would fail too.
+  if (isError && error instanceof AuthServiceUnavailableError) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-bg-app px-4 text-center">
+        <p
+          className={cn(
+            "text-[length:var(--text-small-size)] leading-[var(--text-small-leading)]",
+            "text-fg-muted max-w-sm",
+          )}
+        >
+          {error.message}
+        </p>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => window.location.reload()}
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  // Not authenticated — redirect to /login preserving the attempted URL
+  if (isError || !user) {
+    const returnTo = location.pathname + location.search;
+    const loginPath =
+      returnTo && returnTo !== "/" && returnTo !== "/login"
+        ? `/login?next=${encodeURIComponent(returnTo)}`
+        : "/login";
+    return <Navigate to={loginPath} replace />;
   }
 
   return (
