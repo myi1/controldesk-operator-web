@@ -167,7 +167,8 @@ export function PreviewPanel({
     <aside
       className={cn(
         "fixed top-[var(--topbar-height,56px)] right-0 bottom-0",
-        "w-[var(--preview-panel-width,420px)]",
+        // Full-width on mobile; fixed panel width on sm and up
+        "w-full sm:w-[var(--preview-panel-width,420px)]",
         "border-l border-border-default",
         "bg-bg-surface",
         "overflow-y-auto",

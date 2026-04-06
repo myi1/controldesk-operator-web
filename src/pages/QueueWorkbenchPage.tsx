@@ -109,7 +109,8 @@ export default function QueueWorkbenchPage() {
         className={cn(
           "flex flex-1 flex-col min-w-0",
           "transition-[margin] duration-[var(--duration-normal,200ms)]",
-          previewOpen && "mr-[var(--preview-panel-width,420px)]",
+          // On mobile the panel overlays full-width; only shift content on sm+
+          previewOpen && "sm:mr-[var(--preview-panel-width,420px)]",
         )}
       >
         {/* Filter bar */}

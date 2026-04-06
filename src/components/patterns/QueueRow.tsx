@@ -118,8 +118,8 @@ export const QueueRow = memo(function QueueRow({
         </div>
       </td>
 
-      {/* Property / Unit context */}
-      <td className="w-[160px] px-2">
+      {/* Property / Unit context — hidden on small screens */}
+      <td className="hidden lg:table-cell w-[160px] px-2">
         <span
           className={cn(
             "block truncate",
@@ -141,13 +141,13 @@ export const QueueRow = memo(function QueueRow({
         />
       </td>
 
-      {/* Owner */}
-      <td className="w-[120px] px-2">
+      {/* Owner — hidden on small screens */}
+      <td className="hidden md:table-cell w-[120px] px-2">
         <OwnerChip owner={row.current_owner} />
       </td>
 
-      {/* Due */}
-      <td className="w-[100px] px-2">
+      {/* Due — hidden on small screens */}
+      <td className="hidden md:table-cell w-[100px] px-2">
         <DueIndicator
           targetDate={row.target_date}
           isOverdue={row.is_overdue || row.overdue}
