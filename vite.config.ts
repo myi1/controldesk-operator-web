@@ -41,6 +41,14 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    preview: {
+      proxy: {
+        "/api": {
+          target: frappeUrl,
+          changeOrigin: true,
+        },
+      },
+    },
     test: {
       environment: "jsdom",
       globals: true,

@@ -1,10 +1,9 @@
 // ---------------------------------------------------------------------------
-// Base Frappe RPC client
+// REST API client — JWT Bearer auth, FastAPI backend at /api/v1/
 // ---------------------------------------------------------------------------
 
 import { z } from "zod";
-import { getCsrfToken, fetchCsrfToken } from "../lib/auth";
-import type { FrappeResponse } from "../types/api";
+import { getToken } from "../lib/auth";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -39,7 +38,7 @@ export class ApiError extends Error {
 /** Thrown when the backend returns a shape that doesn't match our schema. */
 export class ApiSchemaError extends Error {
   constructor(
-    method: string,
+    endpoint: string,
     public cause: unknown,
   ) {
     const detail =
@@ -50,7 +49,7 @@ export class ApiSchemaError extends Error {
             .map((i) => `${i.path.join(".")}: ${i.message}`)
             .join("; ")
         : "";
-    super(`Unexpected response shape from ${method}${detail}`);
+    super(`Unexpected response shape from ${endpoint}${detail}`);
     this.name = "ApiSchemaError";
   }
 }
@@ -62,7 +61,6 @@ export class ApiSchemaError extends Error {
 /** True for errors worth retrying (transient network / server-side). */
 function isRetryable(err: unknown): boolean {
   if (err instanceof ApiError) {
-    // Timeout, network down, or 5xx server errors
     return err.httpStatus === 0 || err.httpStatus === 408 || err.httpStatus >= 500;
   }
   return false;
@@ -70,7 +68,7 @@ function isRetryable(err: unknown): boolean {
 
 /** Exponential backoff delay in ms with ±30% jitter. */
 function backoffDelay(attempt: number): number {
-  const base = Math.min(1000 * 2 ** attempt, 16_000); // cap at 16s
+  const base = Math.min(1000 * 2 ** attempt, 16_000);
   const jitter = base * 0.3 * (Math.random() * 2 - 1);
   return Math.max(0, base + jitter);
 }
@@ -80,30 +78,62 @@ function sleep(ms: number): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Core fetch (single attempt)
+// Shared helpers
 // ---------------------------------------------------------------------------
 
-async function doFetch(
-  url: string,
-  params: object,
-  csrfToken: string,
-): Promise<Response> {
+function authHeaders(): Record<string, string> {
+  const token = getToken();
+  return {
+    Accept: "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+async function extractErrorMessage(res: Response): Promise<string> {
+  try {
+    const body = (await res.json()) as { detail?: unknown };
+    if (typeof body.detail === "string") return body.detail;
+    if (Array.isArray(body.detail)) {
+      // FastAPI validation error: [{ msg: string, loc: [...] }]
+      const msgs = (body.detail as Array<{ msg?: string }>)
+        .map((e) => e.msg)
+        .filter(Boolean);
+      if (msgs.length) return msgs.join("; ");
+    }
+  } catch {
+    // Body is not JSON — fall through to generic message
+  }
+  return `HTTP ${res.status}`;
+}
+
+async function handleResponse<T>(res: Response, endpoint: string): Promise<T> {
+  if (res.status === 401) {
+    emitSessionExpired();
+    throw new ApiError("Your session has expired. Please sign in again.", 401);
+  }
+  if (res.status === 403) {
+    throw new ApiError("Permission denied.", 403);
+  }
+  if (!res.ok) {
+    const msg = await extractErrorMessage(res);
+    throw new ApiError(msg, res.status);
+  }
+  try {
+    return (await res.json()) as T;
+  } catch {
+    throw new ApiSchemaError(endpoint, new Error("Response body was not valid JSON"));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Core fetch with timeout
+// ---------------------------------------------------------------------------
+
+async function doFetch(url: string, init: RequestInit): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
   try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        "X-Frappe-CSRF-Token": csrfToken,
-      },
-      credentials: "include",
-      body: JSON.stringify(params),
-      signal: controller.signal,
-    });
-    return res;
+    return await fetch(url, { ...init, signal: controller.signal });
   } catch (err) {
     if ((err as Error).name === "AbortError") {
       throw new ApiError("Request timed out. Please try again.", 408);
@@ -115,114 +145,75 @@ async function doFetch(
 }
 
 // ---------------------------------------------------------------------------
-// Response parsing helpers
+// Public API: GET with optional query params
 // ---------------------------------------------------------------------------
 
-async function extractErrorMessage(res: Response): Promise<string> {
-  try {
-    const body = (await res.json()) as { message?: string; exc?: string };
-    if (body.message) return body.message;
-    if (body.exc) return body.exc;
-  } catch {
-    // Body is not JSON — use generic status message
-  }
-  return `HTTP ${res.status}`;
-}
-
-async function parseSuccessBody<T>(res: Response, method: string): Promise<T> {
-  let body: FrappeResponse<T>;
-  try {
-    body = (await res.json()) as FrappeResponse<T>;
-  } catch {
-    throw new ApiSchemaError(method, new Error("Response body was not valid JSON"));
-  }
-  if (!("message" in body)) {
-    throw new ApiSchemaError(method, new Error("Response missing 'message' envelope"));
-  }
-  return body.message;
-}
-
-// ---------------------------------------------------------------------------
-// Public API call with retry
-// ---------------------------------------------------------------------------
-
-/**
- * Invoke a Frappe whitelisted RPC method with automatic retry on transient
- * errors, CSRF refresh on 403, and session-expiry signalling on 401.
- */
-export async function frappeCall<T>(
-  method: string,
-  params: object = {},
+export async function apiGet<T>(
+  path: string,
+  params: Record<string, string | number | boolean | null | undefined> = {},
 ): Promise<T> {
-  const url = `${BASE_URL}/api/method/${method}`;
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v != null) qs.append(k, String(v));
+  }
+  const query = qs.toString();
+  const url = query ? `${BASE_URL}${path}?${query}` : `${BASE_URL}${path}`;
   let lastError: unknown;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    if (attempt > 0) {
-      await sleep(backoffDelay(attempt - 1));
-    }
+    if (attempt > 0) await sleep(backoffDelay(attempt - 1));
 
     let res: Response;
     try {
-      res = await doFetch(url, params, getCsrfToken());
+      res = await doFetch(url, { method: "GET", headers: authHeaders() });
     } catch (err) {
       lastError = err;
       if (isRetryable(err)) continue;
       throw err;
     }
 
-    // 401 — expired session, no point retrying
-    if (res.status === 401) {
-      emitSessionExpired();
-      throw new ApiError("Your session has expired. Please sign in again.", 401);
-    }
-
-    // 403 — possibly stale CSRF token; refresh and retry this attempt (once)
-    if (res.status === 403) {
-      const freshToken = await fetchCsrfToken();
-      if (freshToken) {
-        let retryRes: Response;
-        try {
-          retryRes = await doFetch(url, params, freshToken);
-        } catch (err) {
-          lastError = err;
-          if (isRetryable(err)) continue;
-          throw err;
-        }
-
-        if (retryRes.status === 401) {
-          emitSessionExpired();
-          throw new ApiError("Your session has expired. Please sign in again.", 401);
-        }
-
-        if (retryRes.status === 403) {
-          throw new ApiError("Permission denied.", 403);
-        }
-
-        if (!retryRes.ok) {
-          const msg = await extractErrorMessage(retryRes);
-          const err = new ApiError(msg, retryRes.status);
-          if (isRetryable(err)) { lastError = err; continue; }
-          throw err;
-        }
-
-        return parseSuccessBody<T>(retryRes, method);
-      }
-
-      throw new ApiError("Permission denied.", 403);
-    }
-
-    // Other non-OK responses
-    if (!res.ok) {
-      const msg = await extractErrorMessage(res);
-      const err = new ApiError(msg, res.status);
+    try {
+      return await handleResponse<T>(res, path);
+    } catch (err) {
       if (isRetryable(err)) { lastError = err; continue; }
       throw err;
     }
-
-    return parseSuccessBody<T>(res, method);
   }
 
-  // All retries exhausted
+  throw lastError ?? new ApiError("Request failed after multiple attempts.", 0);
+}
+
+// ---------------------------------------------------------------------------
+// Public API: POST with JSON body
+// ---------------------------------------------------------------------------
+
+export async function apiPost<T>(path: string, body: unknown = {}): Promise<T> {
+  const url = `${BASE_URL}${path}`;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) await sleep(backoffDelay(attempt - 1));
+
+    let res: Response;
+    try {
+      res = await doFetch(url, {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    } catch (err) {
+      lastError = err;
+      if (isRetryable(err)) continue;
+      throw err;
+    }
+
+    try {
+      return await handleResponse<T>(res, path);
+    } catch (err) {
+      if (isRetryable(err)) { lastError = err; continue; }
+      throw err;
+    }
+  }
+
   throw lastError ?? new ApiError("Request failed after multiple attempts.", 0);
 }

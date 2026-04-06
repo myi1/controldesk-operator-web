@@ -1,12 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  login,
-  logout,
-  getCsrfToken,
-  setCsrfToken,
-  clearCsrfToken,
-  fetchCsrfToken,
-} from "./auth";
+import { login, logout, getToken, setToken, clearToken } from "./auth";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                             */
@@ -17,61 +10,33 @@ function mockFetch(status: number, body: unknown) {
     ok: status >= 200 && status < 300,
     status,
     json: () => Promise.resolve(body),
-    text: () => Promise.resolve(typeof body === "string" ? body : JSON.stringify(body)),
   });
 }
 
 beforeEach(() => {
-  clearCsrfToken();
+  clearToken();
   vi.restoreAllMocks();
+  sessionStorage.clear();
 });
 
 /* ------------------------------------------------------------------ */
-/*  CSRF token cache                                                    */
+/*  Token storage                                                       */
 /* ------------------------------------------------------------------ */
 
-describe("CSRF token cache", () => {
-  it("getCsrfToken returns empty string by default", () => {
-    expect(getCsrfToken()).toBe("");
+describe("token storage", () => {
+  it("getToken returns null by default", () => {
+    expect(getToken()).toBeNull();
   });
 
-  it("setCsrfToken stores a value retrievable by getCsrfToken", () => {
-    setCsrfToken("abc123");
-    expect(getCsrfToken()).toBe("abc123");
+  it("setToken stores a value retrievable by getToken", () => {
+    setToken("test-jwt-token");
+    expect(getToken()).toBe("test-jwt-token");
   });
 
-  it("clearCsrfToken resets to empty string", () => {
-    setCsrfToken("abc123");
-    clearCsrfToken();
-    expect(getCsrfToken()).toBe("");
-  });
-});
-
-/* ------------------------------------------------------------------ */
-/*  fetchCsrfToken                                                      */
-/* ------------------------------------------------------------------ */
-
-describe("fetchCsrfToken", () => {
-  it("parses and caches the CSRF token from the HTML response", async () => {
-    vi.stubGlobal(
-      "fetch",
-      mockFetch(200, 'csrf_token = "token-xyz-12345678"'),
-    );
-    const token = await fetchCsrfToken();
-    expect(token).toBe("token-xyz-12345678");
-    expect(getCsrfToken()).toBe("token-xyz-12345678");
-  });
-
-  it("returns the cached (empty) token when the fetch fails", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network")));
-    const token = await fetchCsrfToken();
-    expect(token).toBe("");
-  });
-
-  it("returns the cached token when the HTML has no csrf_token pattern", async () => {
-    vi.stubGlobal("fetch", mockFetch(200, "<html><body>no token here</body></html>"));
-    const token = await fetchCsrfToken();
-    expect(token).toBe("");
+  it("clearToken removes the stored token", () => {
+    setToken("test-jwt-token");
+    clearToken();
+    expect(getToken()).toBeNull();
   });
 });
 
@@ -80,33 +45,54 @@ describe("fetchCsrfToken", () => {
 /* ------------------------------------------------------------------ */
 
 describe("login", () => {
-  it("resolves with the user email on success", async () => {
-    vi.stubGlobal("fetch", mockFetch(200, { message: "Logged In" }));
-    const result = await login("user@example.com", "password");
-    expect(result.user).toBe("user@example.com");
+  const successBody = {
+    access_token: "jwt-abc123",
+    token_type: "bearer",
+    expires_at: "2026-12-31T00:00:00Z",
+    user: {
+      username: "operator@controldesk.local",
+      roles: ["Operator"],
+      default_actor_role: "Operator",
+    },
+  };
+
+  it("stores the access token in sessionStorage on success", async () => {
+    vi.stubGlobal("fetch", mockFetch(200, successBody));
+    await login("operator@controldesk.local", "secret");
+    expect(getToken()).toBe("jwt-abc123");
   });
 
-  it("uses the message field as user when not 'Logged In'", async () => {
-    vi.stubGlobal("fetch", mockFetch(200, { message: "user@frappe.io" }));
-    const result = await login("user@frappe.io", "pw");
-    expect(result.user).toBe("user@frappe.io");
+  it("resolves with the user profile on success", async () => {
+    vi.stubGlobal("fetch", mockFetch(200, successBody));
+    const result = await login("operator@controldesk.local", "secret");
+    expect(result.user.username).toBe("operator@controldesk.local");
+    expect(result.user.roles).toEqual(["Operator"]);
   });
 
-  it("throws when the response is not ok", async () => {
-    vi.stubGlobal(
-      "fetch",
-      mockFetch(401, { message: "Invalid credentials" }),
-    );
-    await expect(login("bad@email.com", "wrong")).rejects.toThrow(
-      "Invalid credentials",
-    );
+  it("calls POST /api/v1/auth/token with username and password", async () => {
+    const spy = mockFetch(200, successBody);
+    vi.stubGlobal("fetch", spy);
+    await login("user", "pass");
+    const [url, init] = spy.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("/api/v1/auth/token");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toMatchObject({ username: "user", password: "pass" });
   });
 
-  it("throws a fallback message when the error body has no message", async () => {
+  it("throws with the backend detail message on failure", async () => {
+    vi.stubGlobal("fetch", mockFetch(401, { detail: "Invalid credentials" }));
+    await expect(login("bad", "wrong")).rejects.toThrow("Invalid credentials");
+  });
+
+  it("throws a fallback message when the error body has no detail", async () => {
     vi.stubGlobal("fetch", mockFetch(401, {}));
-    await expect(login("x@y.com", "pw")).rejects.toThrow(
-      "Login failed",
-    );
+    await expect(login("bad", "wrong")).rejects.toThrow("Login failed");
+  });
+
+  it("does not store a token when login fails", async () => {
+    vi.stubGlobal("fetch", mockFetch(401, { detail: "Invalid credentials" }));
+    await login("bad", "wrong").catch(() => undefined);
+    expect(getToken()).toBeNull();
   });
 });
 
@@ -115,13 +101,13 @@ describe("login", () => {
 /* ------------------------------------------------------------------ */
 
 describe("logout", () => {
-  it("resolves even when the network call succeeds", async () => {
-    vi.stubGlobal("fetch", mockFetch(200, {}));
-    await expect(logout()).resolves.toBeUndefined();
+  it("clears the stored token", async () => {
+    setToken("existing-token");
+    await logout();
+    expect(getToken()).toBeNull();
   });
 
-  it("resolves (does not throw) even when the network call fails", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+  it("resolves without throwing (no network call needed)", async () => {
     await expect(logout()).resolves.toBeUndefined();
   });
 });

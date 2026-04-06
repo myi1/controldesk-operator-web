@@ -190,8 +190,10 @@ export interface ActionResponse {
   [key: string]: unknown;
 }
 
-// ---- Frappe RPC envelope ----
+// ---- Auth ----
 
-export interface FrappeResponse<T> {
-  message: T;
+export interface LoginUser {
+  username: string;
+  roles: string[];
+  default_actor_role: string;
 }

@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { LogOut, Monitor, Sun, Moon } from "lucide-react";
 import { cn } from "../lib/cn";
-import { logout, clearCsrfToken } from "../lib/auth";
+import { logout, clearToken } from "../lib/auth";
 import { useTheme } from "../hooks/use-theme";
 import { useUIStore } from "../stores/ui-store";
 import { useRoleGate } from "../hooks/use-role-gate";
@@ -126,7 +126,7 @@ export default function SettingsPage() {
       await logout();
     } finally {
       // Always clean up client-side state, even if the network call failed
-      clearCsrfToken();
+      clearToken();
       await queryClient.cancelQueries();
       queryClient.clear();
       navigate("/login", { replace: true });

@@ -32,7 +32,7 @@ vi.mock("../hooks/use-auth-check", () => ({
 
 vi.mock("../lib/auth", () => ({
   logout: vi.fn().mockResolvedValue(undefined),
-  clearCsrfToken: vi.fn(),
+  clearToken: vi.fn(),
 }));
 
 /* ------------------------------------------------------------------ */
