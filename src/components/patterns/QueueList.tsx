@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -62,6 +62,35 @@ function SortIcon({ direction }: { direction: false | "asc" | "desc" }) {
 const columnHelper = createColumnHelper<QueueRowType>();
 
 /* ------------------------------------------------------------------ */
+/*  Select-all header — reads selection store directly so the          */
+/*  columns array never needs to re-create on selection changes.       */
+/* ------------------------------------------------------------------ */
+
+function SelectAllHeader({
+  rowIdsRef,
+}: {
+  rowIdsRef: React.RefObject<string[]>;
+}) {
+  const { selectedIds, selectAll, clear } = useSelectionStore();
+  const rowIds = rowIdsRef.current;
+  const allSelected = rowIds.length > 0 && rowIds.every((id) => selectedIds.has(id));
+  const someSelected = rowIds.some((id) => selectedIds.has(id));
+  return (
+    <Checkbox
+      checked={allSelected}
+      indeterminate={!allSelected && someSelected}
+      onCheckedChange={() => {
+        if (allSelected) {
+          clear();
+        } else {
+          selectAll(rowIds);
+        }
+      }}
+    />
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -96,8 +125,17 @@ export function QueueList({
     [rows, pageIndex, pageSize],
   );
 
+  // Keep a ref of current page docnames for use in SelectAllHeader without
+  // making it a column dep (avoids rebuilding the entire column array on
+  // every selection change or page turn).
+  const paginatedRowIdsRef = useRef<string[]>([]);
+  paginatedRowIdsRef.current = useMemo(
+    () => paginatedRows.map((r) => r.docname),
+    [paginatedRows],
+  );
+
   // Selection store
-  const { selectedIds, toggle, selectAll, clear, count: selectedCount } = useSelectionStore();
+  const { selectedIds, toggle, clear, count: selectedCount } = useSelectionStore();
 
   // Bulk actions
   const bulkAction = useBulkAction();
@@ -149,30 +187,14 @@ export function QueueList({
   // Active row index (for keyboard navigation)
   const [activeIndex, setActiveIndex] = useState<number>(-1);
 
-  // Column definitions
+  // Column definitions — stable (no deps) because SelectAllHeader reads
+  // from the store directly and gets row IDs via paginatedRowIdsRef.
   const columns = useMemo(
     () => [
       columnHelper.display({
         id: "select",
         size: 32,
-        header: () => {
-          const allOnPage = paginatedRows.map((r) => r.docname);
-          const allSelected = allOnPage.length > 0 && allOnPage.every((id) => selectedIds.has(id));
-          const someSelected = allOnPage.some((id) => selectedIds.has(id));
-          return (
-            <Checkbox
-              checked={allSelected}
-              indeterminate={!allSelected && someSelected}
-              onCheckedChange={() => {
-                if (allSelected) {
-                  clear();
-                } else {
-                  selectAll(allOnPage);
-                }
-              }}
-            />
-          );
-        },
+        header: () => <SelectAllHeader rowIdsRef={paginatedRowIdsRef} />,
       }),
       columnHelper.display({
         id: "queue",
@@ -210,7 +232,8 @@ export function QueueList({
         header: "Signals",
       }),
     ],
-    [paginatedRows, selectedIds, clear, selectAll],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- columns are stable; SelectAllHeader reads store via hook
+    [],
   );
 
   // Table sorting

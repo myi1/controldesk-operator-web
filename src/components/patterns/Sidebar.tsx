@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState, useMemo } from "react";
 import { NavLink } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
 import { cn } from "../../lib/cn";
@@ -31,7 +31,7 @@ const GROUP_LABELS: Record<QueueGroup, string> = {
 /*  Collapsible group                                                  */
 /* ------------------------------------------------------------------ */
 
-function SidebarGroup({
+const SidebarGroup = memo(function SidebarGroup({
   group,
   entries,
   collapsed,
@@ -111,34 +111,44 @@ function SidebarGroup({
       )}
     </div>
   );
-}
+});
 
 /* ------------------------------------------------------------------ */
 /*  Main Sidebar                                                       */
 /* ------------------------------------------------------------------ */
 
-export function Sidebar() {
+export const Sidebar = memo(function Sidebar() {
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
   const { data } = useBootstrap();
 
   // Build a lookup map from queue_key -> counts
-  const queueCounts = new Map<
-    string,
-    { count: number; overdueCount: number }
-  >();
-  if (data?.queue_summaries) {
-    for (const qs of data.queue_summaries) {
-      queueCounts.set(qs.queue_key, {
-        count: qs.count,
-        overdueCount: qs.overdue_count,
-      });
+  const queueCounts = useMemo(() => {
+    const map = new Map<string, { count: number; overdueCount: number }>();
+    if (data?.queue_summaries) {
+      for (const qs of data.queue_summaries) {
+        map.set(qs.queue_key, {
+          count: qs.count,
+          overdueCount: qs.overdue_count,
+        });
+      }
     }
-  }
+    return map;
+  }, [data?.queue_summaries]);
 
-  // Group entries
-  const personalEntries = QUEUE_CONFIG.filter((q) => q.group === "personal");
-  const domainEntries = QUEUE_CONFIG.filter((q) => q.group === "domain");
-  const systemEntries = QUEUE_CONFIG.filter((q) => q.group === "system");
+  // Group entries — QUEUE_CONFIG is module-level const, so these never change.
+  // useMemo here is mostly for future-proofing if QUEUE_CONFIG ever becomes dynamic.
+  const personalEntries = useMemo(
+    () => QUEUE_CONFIG.filter((q) => q.group === "personal"),
+    [],
+  );
+  const domainEntries = useMemo(
+    () => QUEUE_CONFIG.filter((q) => q.group === "domain"),
+    [],
+  );
+  const systemEntries = useMemo(
+    () => QUEUE_CONFIG.filter((q) => q.group === "system"),
+    [],
+  );
 
   return (
     <aside
@@ -190,4 +200,4 @@ export function Sidebar() {
       </nav>
     </aside>
   );
-}
+});
