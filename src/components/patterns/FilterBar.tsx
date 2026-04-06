@@ -33,12 +33,14 @@ function DebouncedInput({
   initialValue,
   onCommit,
   placeholder,
+  ariaLabel,
   className,
   icon: Icon,
 }: {
   initialValue: string;
   onCommit: (value: string) => void;
   placeholder: string;
+  ariaLabel: string;
   className?: string;
   icon?: React.ComponentType<{ size?: number; className?: string }>;
 }) {
@@ -69,6 +71,7 @@ function DebouncedInput({
       <input
         type="search"
         placeholder={placeholder}
+        aria-label={ariaLabel}
         defaultValue={initialValue}
         onChange={handleChange}
         className={cn(
@@ -179,6 +182,7 @@ export function FilterBar({
           initialValue={filters.owner ?? ""}
           onCommit={handleOwner}
           placeholder="Owner..."
+          ariaLabel="Filter by owner"
           className="w-[150px]"
         />
 
@@ -215,6 +219,7 @@ export function FilterBar({
           initialValue={filters.search_text ?? ""}
           onCommit={handleSearch}
           placeholder="Search..."
+          ariaLabel="Search queue items"
           className="w-[200px]"
           icon={Search}
         />
