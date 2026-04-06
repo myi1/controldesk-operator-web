@@ -9,6 +9,7 @@ import { CommandPalette } from "../components/patterns/CommandPalette";
 import { Spinner } from "../components/primitives/Spinner";
 import { useUIStore } from "../stores/ui-store";
 import { useAuthCheck } from "../hooks/use-auth-check";
+import { useSessionExpiry } from "../hooks/use-session-expiry";
 
 function PageFallback() {
   return (
@@ -21,6 +22,9 @@ function PageFallback() {
 export function AppShell() {
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
   const { data: user, isLoading, isError } = useAuthCheck();
+
+  // Redirect to /login (with ?next=) whenever any API call returns 401
+  useSessionExpiry();
 
   // Redirect to login if not authenticated
   if (isError || (!isLoading && !user)) {

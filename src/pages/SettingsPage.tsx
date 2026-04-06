@@ -2,12 +2,16 @@
 // SettingsPage — route: /settings
 // ---------------------------------------------------------------------------
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { LogOut, Monitor, Sun, Moon } from "lucide-react";
 import { cn } from "../lib/cn";
+import { logout, clearCsrfToken } from "../lib/auth";
 import { useTheme } from "../hooks/use-theme";
 import { useUIStore } from "../stores/ui-store";
 import { useRoleGate } from "../hooks/use-role-gate";
+import { useAuthCheck } from "../hooks/use-auth-check";
 import {
   KEYBOARD_SHORTCUTS,
   type ShortcutScope,
@@ -107,15 +111,26 @@ function SettingsSection({
 /* ------------------------------------------------------------------ */
 
 export default function SettingsPage() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { theme, setTheme } = useTheme();
   const { rowDensity, setRowDensity, sidebarCollapsed, toggleSidebar } =
     useUIStore();
   const { userRoles } = useRoleGate();
+  const { data: currentUser } = useAuthCheck();
+  const [signingOut, setSigningOut] = useState(false);
 
-  const handleSignOut = useCallback(() => {
-    // In production, redirect to /api/method/logout
-    window.location.href = "/api/method/logout";
-  }, []);
+  const handleSignOut = useCallback(async () => {
+    setSigningOut(true);
+    try {
+      await logout();
+    } finally {
+      // Always clean up client-side state, even if the network call failed
+      clearCsrfToken();
+      queryClient.clear();
+      navigate("/login", { replace: true });
+    }
+  }, [navigate, queryClient]);
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -249,21 +264,10 @@ export default function SettingsPage() {
             <div className="flex justify-between gap-4">
               <div>
                 <p className="text-[length:var(--text-small-size)] font-medium text-fg-default">
-                  Display name
-                </p>
-                <p className="text-[length:var(--text-small-size)] text-fg-muted">
-                  Operator User
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-between gap-4">
-              <div>
-                <p className="text-[length:var(--text-small-size)] font-medium text-fg-default">
                   Email
                 </p>
                 <p className="text-[length:var(--text-small-size)] text-fg-muted">
-                  operator@controldesk.app
+                  {currentUser ?? "—"}
                 </p>
               </div>
             </div>
@@ -291,9 +295,10 @@ export default function SettingsPage() {
               <Button
                 variant="danger"
                 icon={LogOut}
-                onClick={handleSignOut}
+                disabled={signingOut}
+                onClick={() => void handleSignOut()}
               >
-                Sign out
+                {signingOut ? "Signing out…" : "Sign out"}
               </Button>
             </div>
           </div>
