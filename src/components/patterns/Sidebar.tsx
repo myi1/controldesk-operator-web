@@ -1,6 +1,6 @@
 import { memo, useState, useMemo } from "react";
 import { NavLink } from "react-router-dom";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Building2, BarChart3, DoorOpen, Users, Briefcase } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { Separator } from "../primitives/Separator";
 import { Tooltip } from "../primitives/Tooltip";
@@ -16,6 +16,83 @@ const GROUP_LABELS: Record<QueueGroup, string> = {
   domain: "Domain Queues",
   system: "System",
 };
+
+/* ------------------------------------------------------------------ */
+/*  PMS nav entries                                                     */
+/* ------------------------------------------------------------------ */
+
+const PMS_ENTRIES = [
+  { key: "properties", label: "Properties", path: "/properties", icon: <Building2 size={14} aria-hidden="true" /> },
+  { key: "portfolio", label: "Portfolio", path: "/portfolio", icon: <BarChart3 size={14} aria-hidden="true" /> },
+  { key: "units", label: "Units", path: "/units", icon: <DoorOpen size={14} aria-hidden="true" /> },
+  { key: "tenants", label: "Tenants", path: "/tenants", icon: <Users size={14} aria-hidden="true" /> },
+  { key: "landlords", label: "Landlords", path: "/landlords", icon: <Briefcase size={14} aria-hidden="true" /> },
+] as const;
+
+function PmsSidebarGroup({ collapsed }: { collapsed: boolean }) {
+  const [open, setOpen] = useState(true);
+
+  return (
+    <div>
+      {!collapsed && (
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className={cn(
+            "flex w-full items-center gap-1 px-3 py-1.5",
+            "text-[length:var(--text-caption-size)] font-semibold uppercase tracking-wider",
+            "text-fg-faint",
+            "cursor-pointer select-none",
+            "hover:text-fg-muted",
+          )}
+        >
+          <ChevronDown
+            size={12}
+            className={cn(
+              "shrink-0 transition-transform duration-[var(--duration-fast)]",
+              !open && "-rotate-90",
+            )}
+          />
+          Properties
+        </button>
+      )}
+
+      {(collapsed || open) && (
+        <div className="flex flex-col gap-0.5 px-2">
+          {PMS_ENTRIES.map((entry) => {
+            const item = (
+              <NavLink key={entry.key} to={entry.path} className="block">
+                {({ isActive }) => (
+                  <div className={cn(
+                    "flex items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 transition-colors",
+                    "text-[length:var(--text-small-size)]",
+                    isActive
+                      ? "bg-bg-surface-raised font-medium text-fg-default"
+                      : "text-fg-muted hover:bg-bg-muted hover:text-fg-default",
+                    collapsed && "justify-center",
+                  )}>
+                    <span className="shrink-0">{entry.icon}</span>
+                    {!collapsed && entry.label}
+                  </div>
+                )}
+              </NavLink>
+            );
+
+            if (collapsed) {
+              return (
+                <Tooltip key={entry.key} content={entry.label} side="right">
+                  {item}
+                </Tooltip>
+              );
+            }
+
+            return item;
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /*  Collapsible group                                                  */
@@ -187,6 +264,13 @@ export const Sidebar = memo(function Sidebar() {
           collapsed={collapsed}
           queueCounts={queueCounts}
         />
+
+        <div className="px-3 py-1">
+          <Separator />
+        </div>
+
+        {/* PMS surfaces */}
+        <PmsSidebarGroup collapsed={collapsed} />
       </nav>
     </aside>
   );

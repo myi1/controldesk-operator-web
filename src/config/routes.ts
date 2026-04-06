@@ -26,6 +26,13 @@ export const ROUTE_PATHS = {
   // Role inbox (future)
   roleInbox: "/inbox/:roleInboxKey",
 
+  // PMS surfaces
+  properties: "/properties",
+  portfolio: "/portfolio",
+  units: "/units",
+  tenants: "/tenants",
+  landlords: "/landlords",
+
   // Settings
   settings: "/settings",
 
