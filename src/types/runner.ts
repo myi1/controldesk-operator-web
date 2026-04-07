@@ -11,7 +11,8 @@ export type FieldType =
   | "checkbox"
   | "checklist"
   | "reference-text"
-  | "unit-picker";
+  | "unit-picker"
+  | "user-picker";
 
 export interface SelectOption {
   value: string;
@@ -31,6 +32,8 @@ export interface FieldDef {
   min?: number;
   max?: number;
   defaultValue?: string | boolean | number;
+  /** For user-picker fields: filter the user list to this role */
+  filterRole?: string;
 }
 
 export interface RunnerStepDef {

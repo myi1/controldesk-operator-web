@@ -75,7 +75,7 @@ function Select({
             position="popper"
             sideOffset={4}
             className={cn(
-              "z-[var(--z-dropdown)] max-h-60 min-w-[var(--radix-select-trigger-width)] overflow-auto rounded-[var(--radius-lg)] border border-border-default bg-bg-surface-raised p-1 shadow-md",
+              "z-[var(--z-modal-dropdown)] max-h-60 min-w-[var(--radix-select-trigger-width)] overflow-auto rounded-[var(--radius-lg)] border border-border-default bg-bg-surface-raised p-1 shadow-md",
               "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
               "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
             )}

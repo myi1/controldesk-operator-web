@@ -9,6 +9,7 @@ import { Select } from "../primitives/Select";
 import { Checkbox } from "../primitives/Checkbox";
 import type { FieldDef, SelectOption, FieldValues } from "../../types/runner";
 import { UnitPickerField } from "./UnitPickerField";
+import { UserPickerField } from "./UserPickerField";
 
 interface FieldRendererProps {
   field: FieldDef;
@@ -222,6 +223,23 @@ export function FieldRenderer({
         onChange={(unitId) => onChange(unitId)}
         error={error}
         hint={field.hint}
+      />
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // user-picker — searchable combobox populated from auth users endpoint
+  // ---------------------------------------------------------------------------
+  if (field.type === "user-picker") {
+    return (
+      <UserPickerField
+        label={field.label}
+        required={field.required}
+        value={typeof value === "string" ? value : ""}
+        onChange={(username) => onChange(username)}
+        error={error}
+        hint={field.hint}
+        filterRole={field.filterRole}
       />
     );
   }

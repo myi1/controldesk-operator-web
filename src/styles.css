@@ -145,6 +145,18 @@
   --radius-full: var(--radius-full);
 }
 
+/* Native date/time inputs — force light color-scheme so the browser calendar
+   picker is always rendered on a white background and remains readable
+   regardless of the OS dark-mode preference or our app theme.
+   A custom date-picker component can replace this later if needed. */
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"],
+input[type="month"],
+input[type="week"] {
+  color-scheme: light;
+}
+
 /* Respect prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   *,

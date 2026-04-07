@@ -102,6 +102,7 @@ function isFieldValid(field: FieldDef, value: FieldValues[string]): boolean {
     case "number":
     case "select":
     case "unit-picker":
+    case "user-picker":
       return typeof value === "string" && value.trim().length > 0;
     case "textarea": {
       const str = typeof value === "string" ? value : "";

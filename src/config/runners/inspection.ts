@@ -67,10 +67,11 @@ export const INSPECTION_RUNNERS: RunnerConfig[] = [
           },
           {
             key: "inspector_name",
-            label: "Inspector Name",
-            type: "text",
+            label: "Inspector",
+            type: "user-picker",
             required: false,
-            placeholder: "e.g. Ahmed Al-Farsi",
+            filterRole: "Inspections / Move Team",
+            hint: "Assign an inspector from the team. Optional at scheduling time.",
           },
         ],
       },
@@ -101,10 +102,11 @@ export const INSPECTION_RUNNERS: RunnerConfig[] = [
         fields: [
           {
             key: "inspector_name",
-            label: "Inspector Name",
-            type: "text",
+            label: "Inspector",
+            type: "user-picker",
             required: true,
-            placeholder: "e.g. Ahmed Al-Farsi",
+            filterRole: "Inspections / Move Team",
+            hint: "Select the team member conducting this inspection.",
           },
           {
             key: "actual_date",
