@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { cn } from "../lib/cn";
-import { login, fetchCsrfToken } from "../lib/auth";
+import { login } from "../lib/auth";
 import { Input } from "../components/primitives/Input";
 import { Button } from "../components/primitives/Button";
 
@@ -28,8 +28,6 @@ export default function LoginPage() {
 
       try {
         await login(email, password);
-        // Prime CSRF token before any authenticated API calls are made
-        await fetchCsrfToken();
         // Clear all cached queries so bootstrap re-fetches with the new session
         queryClient.clear();
         // Honour redirect-after-login if present in the URL (?next=/queue/…).

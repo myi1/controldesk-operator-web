@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { LogOut, Monitor, Sun, Moon } from "lucide-react";
 import { cn } from "../lib/cn";
-import { logout, clearCsrfToken } from "../lib/auth";
+import { logout, clearToken } from "../lib/auth";
 import { useTheme } from "../hooks/use-theme";
 import { useUIStore } from "../stores/ui-store";
 import { useRoleGate } from "../hooks/use-role-gate";
@@ -126,7 +126,8 @@ export default function SettingsPage() {
       await logout();
     } finally {
       // Always clean up client-side state, even if the network call failed
-      clearCsrfToken();
+      clearToken();
+      await queryClient.cancelQueries();
       queryClient.clear();
       navigate("/login", { replace: true });
     }
@@ -155,10 +156,10 @@ export default function SettingsPage() {
           <div className="space-y-5">
             {/* Theme selector */}
             <div>
-              <label className="text-[length:var(--text-small-size)] font-medium text-fg-default block mb-2">
+              <label id="theme-label" className="text-[length:var(--text-small-size)] font-medium text-fg-default block mb-2">
                 Theme
               </label>
-              <div className="flex gap-2" role="radiogroup" aria-label="Theme">
+              <div className="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="theme-label">
                 {THEME_OPTIONS.map((opt) => (
                   <ThemeOption
                     key={opt.value}
@@ -216,13 +217,13 @@ export default function SettingsPage() {
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-border-default">
-                  <th className="pb-2 pr-4 text-[length:var(--text-caption-size)] font-[number:var(--text-body-medium-weight)] text-fg-muted">
+                  <th scope="col" className="pb-2 pr-4 text-[length:var(--text-caption-size)] font-[number:var(--text-body-medium-weight)] text-fg-muted">
                     Key
                   </th>
-                  <th className="pb-2 pr-4 text-[length:var(--text-caption-size)] font-[number:var(--text-body-medium-weight)] text-fg-muted">
+                  <th scope="col" className="pb-2 pr-4 text-[length:var(--text-caption-size)] font-[number:var(--text-body-medium-weight)] text-fg-muted">
                     Description
                   </th>
-                  <th className="pb-2 text-[length:var(--text-caption-size)] font-[number:var(--text-body-medium-weight)] text-fg-muted">
+                  <th scope="col" className="pb-2 text-[length:var(--text-caption-size)] font-[number:var(--text-body-medium-weight)] text-fg-muted">
                     Scope
                   </th>
                 </tr>

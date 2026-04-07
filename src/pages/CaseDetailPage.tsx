@@ -22,6 +22,13 @@ import type {
 } from "../types/api";
 import { queuePath } from "../config/routes";
 
+/** Default SLA budget in minutes (8 hours). Override per-field when the
+ *  backend supplies a custom budget value. */
+const DEFAULT_SLA_BUDGET_MINUTES = 480;
+
+/** Maximum character length enforced on case notes before submission. */
+const MAX_NOTE_LENGTH = 5000;
+
 import { DetailHeader } from "../components/patterns/DetailHeader";
 import { DetailTabBar } from "../components/patterns/DetailTabBar";
 import { ActivityTimeline } from "../components/patterns/ActivityTimeline";
@@ -88,6 +95,23 @@ function PageSkeleton() {
 }
 
 /* ================================================================== */
+/*  Field value formatting                                             */
+/* ================================================================== */
+
+/**
+ * Render a FieldSnapshot value safely for display.
+ * - null / undefined → em dash
+ * - boolean          → "Yes" / "No"  (never "true" / "false")
+ * - number 0         → "0"           (0 is a valid value, not a dash)
+ * - everything else  → String()
+ */
+function formatFieldValue(value: string | number | boolean | null): string {
+  if (value == null) return "\u2014";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  return String(value);
+}
+
+/* ================================================================== */
 /*  Tab: Overview                                                      */
 /* ================================================================== */
 
@@ -120,7 +144,7 @@ function ContextSectionCard({ section }: { section: ContextSection }) {
                 "text-fg-default text-right truncate",
               )}
             >
-              {field.value != null ? String(field.value) : "\u2014"}
+              {formatFieldValue(field.value)}
             </dd>
           </div>
         ))}
@@ -160,7 +184,7 @@ function FieldSnapshotCard({ fields }: { fields: FieldSnapshot[] }) {
                 "text-fg-default text-right truncate",
               )}
             >
-              {field.value != null ? String(field.value) : "\u2014"}
+              {formatFieldValue(field.value)}
             </dd>
           </div>
         ))}
@@ -278,8 +302,8 @@ function OverviewTab({
                   key={f.key}
                   label={f.label}
                   elapsed={elapsed}
-                  budget={480}
-                  breached={elapsed > 480}
+                  budget={DEFAULT_SLA_BUDGET_MINUTES}
+                  breached={elapsed > DEFAULT_SLA_BUDGET_MINUTES}
                   className="mb-2 last:mb-0"
                 />
               );
@@ -327,8 +351,10 @@ function OverviewTab({
           <textarea
             placeholder="Add a note..."
             rows={2}
+            maxLength={MAX_NOTE_LENGTH}
             value={noteText}
             onChange={(e) => onNoteTextChange(e.target.value)}
+            aria-label="Note text"
             className={cn(
               "w-full rounded-[var(--radius-md)] border border-border-default bg-bg-surface px-3 py-2",
               "text-[length:var(--text-small-size)] text-fg-default placeholder:text-fg-faint",

@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------------
 
 import { useQuery } from "@tanstack/react-query";
-import { fetchCsrfToken } from "../lib/auth";
+import { getToken } from "../lib/auth";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -32,19 +32,18 @@ export class AuthServiceUnavailableError extends Error {
 // ---------------------------------------------------------------------------
 
 async function checkAuth(): Promise<string> {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+
   let res: Response;
   try {
-    res = await fetch(
-      `${BASE_URL}/api/method/frappe.auth.get_logged_user`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        credentials: "include",
+    res = await fetch(`${BASE_URL}/api/v1/auth/me`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
       },
-    );
+    });
   } catch {
     // Network-level failure (DNS, connection refused, offline)
     throw new AuthServiceUnavailableError(0);
@@ -55,21 +54,17 @@ async function checkAuth(): Promise<string> {
     throw new AuthServiceUnavailableError(res.status);
   }
 
-  // 4xx (401, 403, 404) → not authenticated
+  // 4xx (401, 403, 404) → not authenticated or token expired
   if (!res.ok) {
     throw new Error("Not authenticated");
   }
 
-  const data = (await res.json()) as { message: string };
-  if (!data.message || data.message === "Guest") {
+  const data = (await res.json()) as { username: string };
+  if (!data.username) {
     throw new Error("Not authenticated");
   }
 
-  // Prime the CSRF token cache now that we know the session is valid.
-  // Fire-and-forget — auth check result does not depend on CSRF fetch.
-  void fetchCsrfToken();
-
-  return data.message;
+  return data.username;
 }
 
 // ---------------------------------------------------------------------------
@@ -86,8 +81,7 @@ export function useAuthCheck() {
       !(err instanceof AuthServiceUnavailableError) &&
       err.message !== "Not authenticated" &&
       failureCount < 1,
-    // Poll every 5 minutes so session expiry is detected proactively rather
-    // than only when the next real API call happens to return 401.
+    // Poll every 5 minutes so token expiry is detected proactively.
     refetchInterval: 5 * 60 * 1000,
   });
 }

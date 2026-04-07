@@ -39,6 +39,26 @@ const QueueSummarySchema = z.object({
   escalated_count: z.number(),
 });
 
+const BootstrapFormOptionsSchema = z.object({
+  maintenance: z.object({
+    urgency: z.array(z.string()),
+    issue_type: z.array(z.string()),
+    liability_view: z.array(z.string()),
+    blocker_reason: z.array(z.string()),
+  }).optional(),
+  onboarding: z.object({ blocker_reason: z.array(z.string()) }).optional(),
+  moveout: z.object({ blocker_reason: z.array(z.string()) }).optional(),
+  receivables: z.object({
+    blocker_reason: z.array(z.string()),
+    payment_method: z.array(z.string()),
+  }).optional(),
+  vacancy: z.object({ stall_reason: z.array(z.string()) }).optional(),
+  service_recovery: z.object({
+    trigger_type: z.array(z.string()),
+    severity: z.array(z.string()),
+  }).optional(),
+}).optional();
+
 export const BootstrapResponseSchema = z.object({
   queue_summaries: z.array(QueueSummarySchema),
   default_role_inbox_key: z.string().nullable(),
@@ -46,6 +66,7 @@ export const BootstrapResponseSchema = z.object({
   role_inbox_summaries: z.array(z.object({ key: z.string(), label: z.string(), count: z.number() })),
   scope_summaries: z.array(z.object({ key: z.string(), label: z.string(), count: z.number() })),
   saved_view_summaries: z.array(z.object({ key: z.string(), label: z.string(), count: z.number() })),
+  form_options: BootstrapFormOptionsSchema,
 });
 
 // ---------------------------------------------------------------------------

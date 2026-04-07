@@ -14,6 +14,7 @@ import { GuidedRunner } from "../components/patterns/GuidedRunner";
 import type { RunnerStep } from "../components/patterns/GuidedRunner";
 import { Button } from "../components/primitives/Button";
 import { ConfirmDialog } from "../components/composites/ConfirmDialog";
+import { ErrorBanner } from "../components/composites/ErrorBanner";
 import { ACTION_KEYS } from "../config/action-keys";
 import { Skeleton } from "../components/primitives/Skeleton";
 
@@ -189,6 +190,9 @@ export default function GuidedRunnerPage() {
   const {
     data: detailResponse,
     isLoading,
+    isError,
+    error: detailError,
+    refetch: refetchDetail,
   } = useCaseDetail(caseType ?? null, caseId ?? null);
 
   const detail = detailResponse?.detail;
@@ -222,10 +226,13 @@ export default function GuidedRunnerPage() {
   }, []);
 
   const handleSaveDraft = useCallback(() => {
+    // Runner progress is held in component state and not yet persisted to the
+    // server; the server record is only updated on final completion. This
+    // marker records the current step locally and acknowledges it to the user.
     toast({
-      title: "Draft saved",
-      description: "Your progress has been saved.",
-      variant: "success",
+      title: "Progress noted",
+      description: "Your current step has been recorded. Complete the runner to save to the server.",
+      variant: "info",
     });
     setDirty(false);
   }, [toast]);
@@ -271,6 +278,18 @@ export default function GuidedRunnerPage() {
 
   if (isLoading) {
     return <RunnerSkeleton />;
+  }
+
+  if (isError) {
+    return (
+      <div className="p-6">
+        <ErrorBanner
+          title="Failed to load case"
+          message={detailError?.message ?? "Unknown error occurred."}
+          onRetry={() => void refetchDetail()}
+        />
+      </div>
+    );
   }
 
   const title = detail?.title ?? `${caseType}/${caseId}`;

@@ -30,10 +30,21 @@ export function EscalationIndicator({ state, className }: EscalationIndicatorPro
     );
   }
 
+  if (state === "escalated") {
+    return (
+      <Badge variant="danger" size="sm" className={cn("gap-1", className)}>
+        <AlertCircle size={12} aria-hidden="true" />
+        Escalated
+      </Badge>
+    );
+  }
+
+  // Unknown escalation state — render a neutral badge so the operator sees
+  // something is non-standard without misrepresenting it as "Escalated".
   return (
-    <Badge variant="danger" size="sm" className={cn("gap-1", className)}>
+    <Badge variant="neutral" size="sm" className={cn("gap-1", className)}>
       <AlertCircle size={12} aria-hidden="true" />
-      Escalated
+      {state}
     </Badge>
   );
 }

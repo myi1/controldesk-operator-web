@@ -16,6 +16,11 @@ const GuidedRunnerPage = lazy(() => import("./pages/GuidedRunnerPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const AccessDeniedPage = lazy(() => import("./pages/AccessDeniedPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
+const PropertiesPage = lazy(() => import("./pages/PropertiesPage"));
+const PortfolioPage = lazy(() => import("./pages/PortfolioPage"));
+const UnitsPage = lazy(() => import("./pages/UnitsPage"));
+const TenantsPage = lazy(() => import("./pages/TenantsPage"));
+const LandlordsPage = lazy(() => import("./pages/LandlordsPage"));
 
 /* ------------------------------------------------------------------ */
 /*  Login page fallback (outside AppShell, needs its own Suspense)     */
@@ -80,6 +85,28 @@ export const router = createHashRouter([
       {
         path: "case/:caseType/:caseId/run",
         element: <GuidedRunnerPage />,
+      },
+
+      // PMS surfaces
+      {
+        path: "properties",
+        element: <PropertiesPage />,
+      },
+      {
+        path: "portfolio",
+        element: <PortfolioPage />,
+      },
+      {
+        path: "units",
+        element: <UnitsPage />,
+      },
+      {
+        path: "tenants",
+        element: <TenantsPage />,
+      },
+      {
+        path: "landlords",
+        element: <LandlordsPage />,
       },
 
       // Settings

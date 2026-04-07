@@ -7,6 +7,7 @@ import { CommandItem } from "../composites/CommandItem";
 import { useCommandPaletteStore } from "../../stores/command-palette-store";
 import { useKeyboard } from "../../hooks/use-keyboard";
 import { QUEUE_CONFIG } from "../../config/queue-config";
+import { queuePath } from "../../config/routes";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -18,16 +19,6 @@ interface PaletteResult {
   description?: string;
   group: string;
   path: string;
-}
-
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
-
-function queuePath(key: string): string {
-  if (key === "my_work") return "/work";
-  if (key === "intake_exceptions") return "/intake";
-  return `/queue/${key}`;
 }
 
 function buildQueueResults(): PaletteResult[] {
@@ -169,7 +160,7 @@ export function CommandPalette() {
           className={cn(
             "fixed left-1/2 top-[20%] z-[var(--z-command-palette)]",
             "-translate-x-1/2",
-            "w-full max-w-[560px]",
+            "w-[calc(100vw-2rem)] sm:w-full max-w-[560px]",
             "rounded-[var(--radius-xl)] border border-border-default",
             "bg-bg-surface-raised shadow-lg",
             "flex flex-col overflow-hidden",

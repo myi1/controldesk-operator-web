@@ -1,8 +1,12 @@
 // ---------------------------------------------------------------------------
-// Bulk action API calls
+// Bulk action API
+//
+// The FastAPI backend does not expose a bulk-action endpoint, so this module
+// fans out to the single-action endpoint for each docname sequentially,
+// collecting results and per-item failures.
 // ---------------------------------------------------------------------------
 
-import { frappeCall } from "./client";
+import { apiPost } from "./client";
 import type { ActionResponse } from "../types/api";
 
 export interface BulkActionParams {
@@ -26,11 +30,28 @@ export interface BulkActionResponse {
   failed: BulkActionFailure[];
 }
 
-export function executeBulkAction(
+export async function executeBulkAction(
   params: BulkActionParams,
 ): Promise<BulkActionResponse> {
-  return frappeCall<BulkActionResponse>(
-    "controldesk_core.api.run_bulk_operator_action",
-    params as unknown as Record<string, unknown>,
-  );
+  const results: ActionResponse[] = [];
+  const failed: BulkActionFailure[] = [];
+
+  for (const docname of params.docnames) {
+    try {
+      const result = await apiPost<ActionResponse>("/api/v1/operator-shell/actions", {
+        action_key: params.action_key,
+        doctype: params.doctype,
+        docname,
+        actor_role: params.actor_role,
+      });
+      results.push(result);
+    } catch (err) {
+      failed.push({
+        docname,
+        reason: err instanceof Error ? err.message : "Unknown error",
+      });
+    }
+  }
+
+  return { results, failed };
 }

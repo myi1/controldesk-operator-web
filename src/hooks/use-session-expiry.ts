@@ -10,7 +10,7 @@
 import { useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { clearCsrfToken } from "../lib/auth";
+import { clearToken } from "../lib/auth";
 
 export function useSessionExpiry(): void {
   const navigate = useNavigate();
@@ -30,7 +30,7 @@ export function useSessionExpiry(): void {
       if (handled) return;
       handled = true;
 
-      clearCsrfToken();
+      clearToken();
       queryClient.clear();
 
       const returnTo = locationRef.current.pathname + locationRef.current.search;

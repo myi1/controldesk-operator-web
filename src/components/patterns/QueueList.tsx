@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -92,6 +92,49 @@ function exportToCsv(rows: QueueRowType[], filename: string) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Action key → human label                                          */
+/* ------------------------------------------------------------------ */
+
+const ACTION_LABELS: Record<string, string> = {
+  assign: "Assign",
+  snooze: "Snooze",
+  acknowledge: "Acknowledge",
+};
+
+function humaniseActionKey(key: string): string {
+  return ACTION_LABELS[key] ?? key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/* ------------------------------------------------------------------ */
+/*  Select-all header — reads selection store directly so the          */
+/*  columns array never needs to re-create on selection changes.       */
+/* ------------------------------------------------------------------ */
+
+function SelectAllHeader({
+  rowIdsRef,
+}: {
+  rowIdsRef: React.RefObject<string[]>;
+}) {
+  const { selectedIds, selectAll, clear } = useSelectionStore();
+  const rowIds = rowIdsRef.current;
+  const allSelected = rowIds.length > 0 && rowIds.every((id) => selectedIds.has(id));
+  const someSelected = rowIds.some((id) => selectedIds.has(id));
+  return (
+    <Checkbox
+      checked={allSelected}
+      indeterminate={!allSelected && someSelected}
+      onCheckedChange={() => {
+        if (allSelected) {
+          clear();
+        } else {
+          selectAll(rowIds);
+        }
+      }}
+    />
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -126,8 +169,17 @@ export function QueueList({
     [rows, pageIndex, pageSize],
   );
 
+  // Keep a ref of current page docnames for use in SelectAllHeader without
+  // making it a column dep (avoids rebuilding the entire column array on
+  // every selection change or page turn).
+  const paginatedRowIdsRef = useRef<string[]>([]);
+  paginatedRowIdsRef.current = useMemo(
+    () => paginatedRows.map((r) => r.docname),
+    [paginatedRows],
+  );
+
   // Selection store
-  const { selectedIds, toggle, selectAll, clear, count: selectedCount } = useSelectionStore();
+  const { selectedIds, toggle, clear, count: selectedCount } = useSelectionStore();
 
   // Clear selections when the user switches queue or scope so docnames from a
   // previous queue cannot bleed into bulk actions on the new queue.
@@ -157,9 +209,11 @@ export function QueueList({
             const failedCount = failures.length;
             const successCount = docnames.length - failedCount;
 
+            const label = humaniseActionKey(actionKey);
+
             if (failedCount === 0) {
               toast({
-                title: `${actionKey} applied`,
+                title: `${label} applied`,
                 description: `${successCount} item${successCount !== 1 ? "s" : ""} updated.`,
                 variant: "success",
               });
@@ -167,7 +221,7 @@ export function QueueList({
               // All failed — show first reason as a hint
               const hint = failures[0]?.reason;
               toast({
-                title: `${actionKey} failed`,
+                title: `${label} failed`,
                 description: hint
                   ? `All ${failedCount} items failed. First error: ${hint}`
                   : `All ${failedCount} items could not be updated.`,
@@ -177,7 +231,7 @@ export function QueueList({
               // Partial — succeeded some, failed some
               const hint = failures[0]?.reason;
               toast({
-                title: `Partial success`,
+                title: `${label} — partial success`,
                 description: hint
                   ? `${successCount} updated, ${failedCount} failed. First error: ${hint}`
                   : `${successCount} updated, ${failedCount} could not be processed.`,
@@ -189,7 +243,7 @@ export function QueueList({
           },
           onError: (err) => {
             toast({
-              title: `Bulk ${actionKey} failed`,
+              title: `${humaniseActionKey(actionKey)} failed`,
               description: err.message || "Something went wrong.",
               variant: "error",
             });
@@ -207,30 +261,14 @@ export function QueueList({
   // Active row index (for keyboard navigation)
   const [activeIndex, setActiveIndex] = useState<number>(-1);
 
-  // Column definitions
+  // Column definitions — stable (no deps) because SelectAllHeader reads
+  // from the store directly and gets row IDs via paginatedRowIdsRef.
   const columns = useMemo(
     () => [
       columnHelper.display({
         id: "select",
         size: 32,
-        header: () => {
-          const allOnPage = paginatedRows.map((r) => r.docname);
-          const allSelected = allOnPage.length > 0 && allOnPage.every((id) => selectedIds.has(id));
-          const someSelected = allOnPage.some((id) => selectedIds.has(id));
-          return (
-            <Checkbox
-              checked={allSelected}
-              indeterminate={!allSelected && someSelected}
-              onCheckedChange={() => {
-                if (allSelected) {
-                  clear();
-                } else {
-                  selectAll(allOnPage);
-                }
-              }}
-            />
-          );
-        },
+        header: () => <SelectAllHeader rowIdsRef={paginatedRowIdsRef} />,
       }),
       columnHelper.display({
         id: "queue",
@@ -268,7 +306,8 @@ export function QueueList({
         header: "Signals",
       }),
     ],
-    [paginatedRows, selectedIds, clear, selectAll],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- columns are stable; SelectAllHeader reads store via hook
+    [],
   );
 
   // Table sorting
@@ -389,6 +428,10 @@ export function QueueList({
                         "font-[number:var(--text-caption-medium-weight)]",
                         "text-fg-muted",
                         canSort && "cursor-pointer select-none hover:text-fg-default",
+                        // Mirror the responsive visibility of matching <td> cells in QueueRow
+                        header.column.id === "context" && "hidden lg:table-cell",
+                        header.column.id === "current_owner" && "hidden md:table-cell",
+                        header.column.id === "target_date" && "hidden md:table-cell",
                       )}
                       style={{ width: header.getSize() }}
                       onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
