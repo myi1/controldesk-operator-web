@@ -2,11 +2,13 @@
 // Property surfaces API — Properties, Portfolio, Units, Property Context
 // ---------------------------------------------------------------------------
 
-import { apiGet } from "./client";
+import { apiGet, apiPost } from "./client";
 import type {
   PropertiesBootstrapResponse,
   PortfolioBootstrapResponse,
   UnitsBootstrapResponse,
+  CreatePropertyPayload,
+  CreatePropertyResponse,
 } from "../types/api";
 
 export async function fetchPropertiesBootstrap(): Promise<PropertiesBootstrapResponse> {
@@ -19,6 +21,12 @@ export async function fetchPortfolioBootstrap(): Promise<PortfolioBootstrapRespo
 
 export async function fetchUnitsBootstrap(): Promise<UnitsBootstrapResponse> {
   return apiGet<UnitsBootstrapResponse>("/api/v1/units/bootstrap");
+}
+
+export async function createProperty(
+  payload: CreatePropertyPayload,
+): Promise<CreatePropertyResponse> {
+  return apiPost<CreatePropertyResponse>("/api/v1/properties", payload);
 }
 
 export async function fetchPropertyContextBootstrap(params: {

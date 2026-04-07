@@ -419,6 +419,29 @@ export interface UnitRow {
   [key: string]: unknown;
 }
 
+// ---- Property CRUD ----
+
+export interface CreatePropertyPayload {
+  property_label: string;
+  property_reference_id?: string;
+  address: {
+    line1: string;
+    line2?: string;
+    city: string;
+    postcode: string;
+    country?: string;
+  };
+  stock_types: string[];
+  landlord_account_ids: string[];
+  notes?: string;
+}
+
+export interface CreatePropertyResponse {
+  property_reference_id: string;
+  property_label: string;
+  status: string;
+}
+
 export interface UnitsBootstrapResponse {
   rows: UnitRow[];
   filter_options: {

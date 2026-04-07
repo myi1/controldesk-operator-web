@@ -10,12 +10,13 @@ import { useNavigate } from "react-router-dom";
 import {
   Building2, AlertTriangle, Clock, CheckCircle2, Search,
   ChevronRight, X, Users, DoorOpen, Briefcase, ArrowUpRight,
-  RefreshCw,
+  RefreshCw, Plus,
 } from "lucide-react";
 import { cn } from "../lib/cn";
 import { usePropertiesBootstrap } from "../hooks/use-properties";
 import { formatRelative, formatAbsolute } from "../lib/date";
 import type { PropertyRow, PropertyModuleAction } from "../types/api";
+import { AddPropertyWizard } from "../components/patterns/AddPropertyWizard";
 
 /* ------------------------------------------------------------------ */
 /*  Attention state config                                              */
@@ -499,6 +500,7 @@ export default function PropertiesPage() {
   const [activeView, setActiveView] = useState<string>("");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showAddWizard, setShowAddWizard] = useState(false);
 
   // Default the active view once data arrives
   const resolvedView = activeView || data?.default_view_key || "properties_directory";
@@ -582,18 +584,32 @@ export default function PropertiesPage() {
               <RefreshCw size={13} className="animate-spin text-fg-faint" aria-hidden="true" />
             )}
           </div>
-          <button
-            onClick={() => void refetch()}
-            className={cn(
-              "flex items-center gap-1.5 rounded-[var(--radius-md)] border border-border-default",
-              "px-3 py-1.5 text-[length:var(--text-small-size)] text-fg-muted",
-              "hover:bg-bg-muted hover:text-fg-default transition-colors",
-              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
-            )}
-          >
-            <RefreshCw size={13} aria-hidden="true" />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowAddWizard(true)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-[var(--radius-md)] bg-accent-primary px-3 py-1.5",
+                "text-[length:var(--text-small-size)] font-medium text-fg-on-emphasis",
+                "hover:bg-accent-primary/90 transition-colors",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+              )}
+            >
+              <Plus size={13} aria-hidden="true" />
+              Add Property
+            </button>
+            <button
+              onClick={() => void refetch()}
+              className={cn(
+                "flex items-center gap-1.5 rounded-[var(--radius-md)] border border-border-default",
+                "px-3 py-1.5 text-[length:var(--text-small-size)] text-fg-muted",
+                "hover:bg-bg-muted hover:text-fg-default transition-colors",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+              )}
+            >
+              <RefreshCw size={13} aria-hidden="true" />
+              Refresh
+            </button>
+          </div>
         </div>
       </div>
 
@@ -713,6 +729,11 @@ export default function PropertiesPage() {
           />
         )}
       </div>
+
+      <AddPropertyWizard
+        open={showAddWizard}
+        onClose={() => setShowAddWizard(false)}
+      />
     </div>
   );
 }

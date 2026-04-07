@@ -1,0 +1,572 @@
+// ---------------------------------------------------------------------------
+// AddPropertyWizard — 4-step property creation wizard
+//
+// Step 1: Identity   — label, reference ID
+// Step 2: Address    — line1, line2, city, postcode
+// Step 3: Details    — stock types (multi-select), landlord accounts, notes
+// Step 4: Review     — read-only summary before submit
+//
+// Uses WizardShell for chrome, usePropertiesBootstrap for filter options,
+// createProperty mutation for submission.
+// ---------------------------------------------------------------------------
+
+import { useState, useCallback, useMemo } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Building2, MapPin, Tag, FileText, CheckCircle2 } from "lucide-react";
+import { cn } from "../../lib/cn";
+import { WizardShell, type WizardStep } from "./WizardShell";
+import { Input } from "../primitives/Input";
+import { Checkbox } from "../primitives/Checkbox";
+import { createProperty } from "../../api/property-surfaces";
+import { usePropertiesBootstrap } from "../../hooks/use-properties";
+import type { CreatePropertyPayload } from "../../types/api";
+
+/* ------------------------------------------------------------------ */
+/*  Constants                                                           */
+/* ------------------------------------------------------------------ */
+
+const WIZARD_STEPS: WizardStep[] = [
+  { label: "Identity" },
+  { label: "Address" },
+  { label: "Details" },
+  { label: "Review" },
+];
+
+const UK_POSTCODE_RE = /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i;
+
+const FALLBACK_STOCK_TYPES = [
+  "Residential",
+  "HMO",
+  "Commercial",
+  "Mixed Use",
+  "Student",
+  "Supported Living",
+];
+
+/* ------------------------------------------------------------------ */
+/*  Form state                                                          */
+/* ------------------------------------------------------------------ */
+
+interface FormData {
+  property_label: string;
+  property_reference_id: string;
+  line1: string;
+  line2: string;
+  city: string;
+  postcode: string;
+  stock_types: string[];
+  landlord_account_ids: string[];
+  notes: string;
+}
+
+const EMPTY_FORM: FormData = {
+  property_label: "",
+  property_reference_id: "",
+  line1: "",
+  line2: "",
+  city: "",
+  postcode: "",
+  stock_types: [],
+  landlord_account_ids: [],
+  notes: "",
+};
+
+type FieldErrors = Partial<Record<keyof FormData | "stock_types_root" | "landlord_root", string>>;
+
+/* ------------------------------------------------------------------ */
+/*  Field row helpers                                                   */
+/* ------------------------------------------------------------------ */
+
+function FieldRow({ label, required, error, children }: {
+  label: string;
+  required?: boolean;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-1">
+        <span className="text-[length:var(--text-small-size)] font-medium text-fg-default">
+          {label}
+        </span>
+        {required && (
+          <span className="text-status-danger" aria-hidden="true">*</span>
+        )}
+      </div>
+      {children}
+      {error && (
+        <p role="alert" className="text-[length:var(--text-caption-size)] text-status-danger">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Step 1 — Identity                                                   */
+/* ------------------------------------------------------------------ */
+
+function StepIdentity({
+  data,
+  errors,
+  onChange,
+}: {
+  data: FormData;
+  errors: FieldErrors;
+  onChange: (patch: Partial<FormData>) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center gap-2 text-fg-muted">
+        <Building2 size={16} aria-hidden="true" />
+        <p className="text-[length:var(--text-small-size)]">
+          Basic identity information for the property.
+        </p>
+      </div>
+
+      <FieldRow label="Property Name" required error={errors.property_label}>
+        <Input
+          inputSize="lg"
+          placeholder="e.g. 12 Oak Street"
+          value={data.property_label}
+          onChange={(e) => onChange({ property_label: e.target.value })}
+          aria-required="true"
+          autoFocus
+        />
+      </FieldRow>
+
+      <FieldRow
+        label="Reference ID"
+        error={errors.property_reference_id}
+      >
+        <Input
+          inputSize="lg"
+          placeholder="e.g. PROP-001 (auto-generated if left blank)"
+          value={data.property_reference_id}
+          onChange={(e) => onChange({ property_reference_id: e.target.value })}
+        />
+        <p className="text-[length:var(--text-caption-size)] text-fg-muted">
+          Leave blank to auto-generate. Must be unique if provided.
+        </p>
+      </FieldRow>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Step 2 — Address                                                    */
+/* ------------------------------------------------------------------ */
+
+function StepAddress({
+  data,
+  errors,
+  onChange,
+}: {
+  data: FormData;
+  errors: FieldErrors;
+  onChange: (patch: Partial<FormData>) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center gap-2 text-fg-muted">
+        <MapPin size={16} aria-hidden="true" />
+        <p className="text-[length:var(--text-small-size)]">
+          Physical address of the property.
+        </p>
+      </div>
+
+      <FieldRow label="Address Line 1" required error={errors.line1}>
+        <Input
+          inputSize="lg"
+          placeholder="Street number and name"
+          value={data.line1}
+          onChange={(e) => onChange({ line1: e.target.value })}
+          autoFocus
+        />
+      </FieldRow>
+
+      <FieldRow label="Address Line 2" error={errors.line2}>
+        <Input
+          inputSize="lg"
+          placeholder="Flat, suite, building (optional)"
+          value={data.line2}
+          onChange={(e) => onChange({ line2: e.target.value })}
+        />
+      </FieldRow>
+
+      <div className="grid grid-cols-2 gap-4">
+        <FieldRow label="City" required error={errors.city}>
+          <Input
+            inputSize="lg"
+            placeholder="City"
+            value={data.city}
+            onChange={(e) => onChange({ city: e.target.value })}
+          />
+        </FieldRow>
+
+        <FieldRow label="Postcode" required error={errors.postcode}>
+          <Input
+            inputSize="lg"
+            placeholder="e.g. SW1A 1AA"
+            value={data.postcode}
+            onChange={(e) => onChange({ postcode: e.target.value.toUpperCase() })}
+            className="font-mono"
+          />
+        </FieldRow>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Step 3 — Details (stock types, landlord, notes)                    */
+/* ------------------------------------------------------------------ */
+
+function StepDetails({
+  data,
+  errors,
+  onChange,
+  stockTypeOptions,
+  landlordOptions,
+}: {
+  data: FormData;
+  errors: FieldErrors;
+  onChange: (patch: Partial<FormData>) => void;
+  stockTypeOptions: string[];
+  landlordOptions: Array<{ label: string; property_reference_id: string }>;
+}) {
+  const toggleStockType = useCallback((type: string) => {
+    onChange({
+      stock_types: data.stock_types.includes(type)
+        ? data.stock_types.filter((t) => t !== type)
+        : [...data.stock_types, type],
+    });
+  }, [data.stock_types, onChange]);
+
+  const toggleLandlord = useCallback((id: string) => {
+    onChange({
+      landlord_account_ids: data.landlord_account_ids.includes(id)
+        ? data.landlord_account_ids.filter((l) => l !== id)
+        : [...data.landlord_account_ids, id],
+    });
+  }, [data.landlord_account_ids, onChange]);
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Stock types */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-1">
+          <Tag size={14} className="text-fg-muted" aria-hidden="true" />
+          <span className="text-[length:var(--text-small-size)] font-medium text-fg-default">
+            Stock Type
+          </span>
+          <span className="text-status-danger" aria-hidden="true">*</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {stockTypeOptions.map((type) => (
+            <label
+              key={type}
+              className={cn(
+                "flex cursor-pointer items-center gap-2.5 rounded-[var(--radius-md)] border px-3 py-2.5 transition-colors",
+                data.stock_types.includes(type)
+                  ? "border-accent-primary/50 bg-accent-primary/5 text-fg-default"
+                  : "border-border-default bg-bg-surface text-fg-muted hover:bg-bg-muted",
+              )}
+            >
+              <Checkbox
+                checked={data.stock_types.includes(type)}
+                onCheckedChange={() => toggleStockType(type)}
+              />
+              <span className="text-[length:var(--text-small-size)]">{type}</span>
+            </label>
+          ))}
+        </div>
+        {errors.stock_types_root && (
+          <p role="alert" className="text-[length:var(--text-caption-size)] text-status-danger">
+            {errors.stock_types_root}
+          </p>
+        )}
+      </div>
+
+      {/* Landlord accounts */}
+      {landlordOptions.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-1">
+            <span className="text-[length:var(--text-small-size)] font-medium text-fg-default">
+              Landlord Account
+            </span>
+            <span className="text-status-danger" aria-hidden="true">*</span>
+          </div>
+          <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto pr-1">
+            {landlordOptions.map((l) => (
+              <label
+                key={l.property_reference_id}
+                className={cn(
+                  "flex cursor-pointer items-center gap-2.5 rounded-[var(--radius-md)] border px-3 py-2 transition-colors",
+                  data.landlord_account_ids.includes(l.property_reference_id)
+                    ? "border-accent-primary/50 bg-accent-primary/5"
+                    : "border-border-default bg-bg-surface hover:bg-bg-muted",
+                )}
+              >
+                <Checkbox
+                  checked={data.landlord_account_ids.includes(l.property_reference_id)}
+                  onCheckedChange={() => toggleLandlord(l.property_reference_id)}
+                />
+                <span className="text-[length:var(--text-small-size)] text-fg-default">
+                  {l.label}
+                </span>
+              </label>
+            ))}
+          </div>
+          {errors.landlord_root && (
+            <p role="alert" className="text-[length:var(--text-caption-size)] text-status-danger">
+              {errors.landlord_root}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Notes */}
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <FileText size={14} className="text-fg-muted" aria-hidden="true" />
+          <span className="text-[length:var(--text-small-size)] font-medium text-fg-default">
+            Internal Notes
+          </span>
+          <span className="text-[length:var(--text-caption-size)] text-fg-faint">(optional)</span>
+        </div>
+        <textarea
+          value={data.notes}
+          onChange={(e) => onChange({ notes: e.target.value })}
+          placeholder="Any internal notes about this property…"
+          rows={3}
+          className={cn(
+            "w-full resize-none rounded-[var(--radius-md)] border border-border-default bg-bg-surface",
+            "px-3 py-2 text-[length:var(--text-small-size)] text-fg-default placeholder:text-fg-faint",
+            "outline-none transition-[border-color] duration-[var(--duration-fast)]",
+            "focus:border-border-focus focus:outline-2 focus:outline-offset-2 focus:outline-border-focus",
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Step 4 — Review                                                     */
+/* ------------------------------------------------------------------ */
+
+function ReviewRow({ label, value }: { label: string; value: string | React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-[140px_1fr] gap-3 py-2.5 border-b border-border-default last:border-0">
+      <dt className="text-[length:var(--text-small-size)] text-fg-muted">{label}</dt>
+      <dd className="text-[length:var(--text-small-size)] font-medium text-fg-default">{value}</dd>
+    </div>
+  );
+}
+
+function StepReview({
+  data,
+  landlordOptions,
+}: {
+  data: FormData;
+  landlordOptions: Array<{ label: string; property_reference_id: string }>;
+}) {
+  const landlordLabels = landlordOptions
+    .filter((l) => data.landlord_account_ids.includes(l.property_reference_id))
+    .map((l) => l.label)
+    .join(", ") || "—";
+
+  const address = [data.line1, data.line2, data.city, data.postcode]
+    .filter(Boolean)
+    .join(", ");
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-2 text-status-success">
+        <CheckCircle2 size={16} aria-hidden="true" />
+        <p className="text-[length:var(--text-small-size)] font-medium">
+          Review your details before submitting.
+        </p>
+      </div>
+
+      <dl className="rounded-[var(--radius-lg)] border border-border-default bg-bg-surface px-4">
+        <ReviewRow label="Property Name" value={data.property_label} />
+        {data.property_reference_id && (
+          <ReviewRow label="Reference ID" value={data.property_reference_id} />
+        )}
+        <ReviewRow label="Address" value={address || "—"} />
+        <ReviewRow
+          label="Stock Types"
+          value={data.stock_types.length > 0 ? data.stock_types.join(", ") : "—"}
+        />
+        <ReviewRow label="Landlord(s)" value={landlordLabels} />
+        {data.notes && <ReviewRow label="Notes" value={data.notes} />}
+      </dl>
+
+      <p className="text-[length:var(--text-caption-size)] text-fg-faint">
+        Clicking Submit will create this property. You can edit it afterwards from the Properties page.
+      </p>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Main wizard                                                         */
+/* ------------------------------------------------------------------ */
+
+interface AddPropertyWizardProps {
+  open: boolean;
+  onClose: () => void;
+  onSuccess?: (propertyReferenceId: string) => void;
+}
+
+export function AddPropertyWizard({ open, onClose, onSuccess }: AddPropertyWizardProps) {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
+  const [errors, setErrors] = useState<FieldErrors>({});
+
+  const queryClient = useQueryClient();
+  const { data: bootstrap } = usePropertiesBootstrap();
+
+  const stockTypeOptions = useMemo(
+    () => bootstrap?.filter_options?.stock_types ?? FALLBACK_STOCK_TYPES,
+    [bootstrap],
+  );
+
+  const landlordOptions = useMemo(
+    () => bootstrap?.filter_options?.properties ?? [],
+    [bootstrap],
+  );
+
+  const mutation = useMutation({
+    mutationFn: (payload: CreatePropertyPayload) => createProperty(payload),
+    onSuccess: (data) => {
+      void queryClient.invalidateQueries({ queryKey: ["properties-bootstrap"] });
+      onSuccess?.(data.property_reference_id);
+      handleClose();
+    },
+  });
+
+  const patch = useCallback((update: Partial<FormData>) => {
+    setFormData((prev) => ({ ...prev, ...update }));
+    // Clear errors for touched fields
+    setErrors((prev) => {
+      const next = { ...prev };
+      for (const key of Object.keys(update)) {
+        delete next[key as keyof FieldErrors];
+      }
+      return next;
+    });
+  }, []);
+
+  const handleClose = () => {
+    setCurrentStep(0);
+    setFormData(EMPTY_FORM);
+    setErrors({});
+    mutation.reset();
+    onClose();
+  };
+
+  // Validate current step — return true if valid
+  const validateStep = (step: number): boolean => {
+    const errs: FieldErrors = {};
+
+    if (step === 0) {
+      if (!formData.property_label.trim()) {
+        errs.property_label = "Property name is required.";
+      }
+    }
+
+    if (step === 1) {
+      if (!formData.line1.trim()) errs.line1 = "Address line 1 is required.";
+      if (!formData.city.trim()) errs.city = "City is required.";
+      if (!formData.postcode.trim()) {
+        errs.postcode = "Postcode is required.";
+      } else if (!UK_POSTCODE_RE.test(formData.postcode.trim())) {
+        errs.postcode = "Enter a valid UK postcode (e.g. SW1A 1AA).";
+      }
+    }
+
+    if (step === 2) {
+      if (formData.stock_types.length === 0) {
+        errs.stock_types_root = "Select at least one stock type.";
+      }
+      if (landlordOptions.length > 0 && formData.landlord_account_ids.length === 0) {
+        errs.landlord_root = "Select at least one landlord account.";
+      }
+    }
+
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep((s) => s + 1);
+    }
+  };
+
+  const handleBack = () => {
+    setErrors({});
+    setCurrentStep((s) => s - 1);
+  };
+
+  const handleSubmit = () => {
+    if (!validateStep(currentStep)) return;
+
+    const payload: CreatePropertyPayload = {
+      property_label: formData.property_label.trim(),
+      ...(formData.property_reference_id.trim() && {
+        property_reference_id: formData.property_reference_id.trim(),
+      }),
+      address: {
+        line1: formData.line1.trim(),
+        ...(formData.line2.trim() && { line2: formData.line2.trim() }),
+        city: formData.city.trim(),
+        postcode: formData.postcode.trim().toUpperCase(),
+      },
+      stock_types: formData.stock_types,
+      landlord_account_ids: formData.landlord_account_ids,
+      ...(formData.notes.trim() && { notes: formData.notes.trim() }),
+    };
+
+    mutation.mutate(payload);
+  };
+
+  const isDirty = JSON.stringify(formData) !== JSON.stringify(EMPTY_FORM);
+
+  const stepContent = [
+    <StepIdentity key={0} data={formData} errors={errors} onChange={patch} />,
+    <StepAddress key={1} data={formData} errors={errors} onChange={patch} />,
+    <StepDetails
+      key={2}
+      data={formData}
+      errors={errors}
+      onChange={patch}
+      stockTypeOptions={stockTypeOptions}
+      landlordOptions={landlordOptions}
+    />,
+    <StepReview key={3} data={formData} landlordOptions={landlordOptions} />,
+  ];
+
+  return (
+    <WizardShell
+      open={open}
+      onOpenChange={(next) => { if (!next) handleClose(); }}
+      title="Add Property"
+      steps={WIZARD_STEPS}
+      currentStep={currentStep}
+      onNext={handleNext}
+      onBack={handleBack}
+      onSubmit={handleSubmit}
+      canAdvance={true}
+      isSubmitting={mutation.isPending}
+      submitError={mutation.error?.message ?? null}
+      isDirty={isDirty}
+    >
+      {stepContent[currentStep]}
+    </WizardShell>
+  );
+}
