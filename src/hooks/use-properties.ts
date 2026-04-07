@@ -8,12 +8,16 @@ import {
   fetchPortfolioBootstrap,
   fetchUnitsBootstrap,
   fetchPropertyContextBootstrap,
+  fetchTenantsBootstrap,
+  fetchLandlordsBootstrap,
 } from "../api/property-surfaces";
 import type {
   PropertiesBootstrapResponse,
   PortfolioBootstrapResponse,
   UnitsBootstrapResponse,
   PropertyContextBootstrapResponse,
+  TenantsBootstrapResponse,
+  LandlordsBootstrapResponse,
 } from "../types/api";
 
 export function usePropertiesBootstrap() {
@@ -38,6 +42,24 @@ export function useUnitsBootstrap() {
   return useQuery<UnitsBootstrapResponse, Error>({
     queryKey: ["units-bootstrap"],
     queryFn: fetchUnitsBootstrap,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useTenantsBootstrap() {
+  return useQuery<TenantsBootstrapResponse, Error>({
+    queryKey: ["tenants-bootstrap"],
+    queryFn: fetchTenantsBootstrap,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useLandlordsBootstrap() {
+  return useQuery<LandlordsBootstrapResponse, Error>({
+    queryKey: ["landlords-bootstrap"],
+    queryFn: fetchLandlordsBootstrap,
     staleTime: 30_000,
     refetchInterval: 60_000,
   });

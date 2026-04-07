@@ -12,6 +12,8 @@ import type {
   UnitWritePayload,
   DeleteUnitResponse,
   PropertyContextBootstrapResponse,
+  TenantsBootstrapResponse,
+  LandlordsBootstrapResponse,
 } from "../types/api";
 
 export async function fetchPropertiesBootstrap(): Promise<PropertiesBootstrapResponse> {
@@ -47,6 +49,18 @@ export async function updateUnit(
 
 export async function deleteUnit(unitId: string): Promise<DeleteUnitResponse> {
   return apiDelete<DeleteUnitResponse>(`/api/v1/units/${unitId}`);
+}
+
+// ---- Tenants ----
+
+export async function fetchTenantsBootstrap(): Promise<TenantsBootstrapResponse> {
+  return apiGet<TenantsBootstrapResponse>("/api/v1/tenants/bootstrap");
+}
+
+// ---- Landlords ----
+
+export async function fetchLandlordsBootstrap(): Promise<LandlordsBootstrapResponse> {
+  return apiGet<LandlordsBootstrapResponse>("/api/v1/landlords/bootstrap");
 }
 
 // ---- Property Context ----

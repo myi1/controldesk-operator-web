@@ -537,3 +537,55 @@ export interface UnitsBootstrapResponse {
   module_label: string;
   limitations?: string[];
 }
+
+// Tenants bootstrap
+
+export interface TenantRow {
+  tenancy_id: string
+  title: string
+  unit_id: string
+  property_reference_id: string
+  property_label: string
+  landlord_account_id: string
+  occupancy_state: string
+  contract_start_date: string | null
+  contract_end_date: string | null
+  status: string
+  attention_state: string
+  target_date: string | null
+  is_overdue: boolean
+  view_keys: string[]
+}
+
+export interface TenantsBootstrapResponse {
+  rows: TenantRow[]
+  summary_cards: SummaryCard[]
+  view_summaries: ViewSummary[]
+  default_view_key: string
+  filter_options: {
+    occupancy_states: string[]
+    landlord_accounts: string[]
+    properties: { label: string; property_reference_id: string }[]
+  }
+}
+
+// Landlords bootstrap
+
+export interface LandlordRow {
+  landlord_account_id: string
+  display_name: string
+  service_tier: string | null
+  status: string
+  unit_count: number
+  active_tenancy_count: number
+  attention_state: string
+  target_date: string | null
+  view_keys: string[]
+}
+
+export interface LandlordsBootstrapResponse {
+  rows: LandlordRow[]
+  summary_cards: SummaryCard[]
+  view_summaries: ViewSummary[]
+  default_view_key: string
+}

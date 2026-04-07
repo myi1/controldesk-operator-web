@@ -21,13 +21,17 @@ export async function fetchCaseDetail(
   return result.data;
 }
 
-// Audit timeline endpoint is not yet available in this backend version.
-// Returns an empty timeline so the UI degrades gracefully.
 export async function fetchCaseAuditTimeline(
-  _doctype: string,
-  _docname: string,
+  doctype: string,
+  docname: string,
 ): Promise<AuditTimelineResponse> {
-  const stub: AuditTimelineResponse = { audit_timeline: [] };
-  const result = AuditTimelineResponseSchema.safeParse(stub);
-  return result.data!;
+  const raw = await apiGet<unknown>(
+    `/api/v1/operator-shell/cases/${encodeURIComponent(doctype)}/${encodeURIComponent(docname)}/audit-timeline`,
+  );
+
+  const result = AuditTimelineResponseSchema.safeParse(raw);
+  if (!result.success) {
+    throw new ApiSchemaError("/api/v1/operator-shell/cases/.../audit-timeline", result.error);
+  }
+  return result.data;
 }

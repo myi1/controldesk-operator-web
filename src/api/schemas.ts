@@ -186,3 +186,78 @@ export const AuditTimelineResponseSchema = z.object({
     }),
   ),
 });
+
+// ---------------------------------------------------------------------------
+// Tenants bootstrap
+// ---------------------------------------------------------------------------
+
+const SummaryCardSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  value: z.number(),
+});
+
+const ViewSummarySchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  description: z.string(),
+  count: z.number(),
+});
+
+const TenantRowSchema = z
+  .object({
+    tenancy_id: z.string(),
+    title: z.string(),
+    unit_id: z.string(),
+    property_reference_id: z.string(),
+    property_label: z.string(),
+    landlord_account_id: z.string(),
+    occupancy_state: z.string(),
+    contract_start_date: z.string().nullable(),
+    contract_end_date: z.string().nullable(),
+    status: z.string(),
+    attention_state: z.string(),
+    target_date: z.string().nullable(),
+    is_overdue: z.boolean(),
+    view_keys: z.array(z.string()),
+  })
+  .passthrough();
+
+export const TenantsBootstrapResponseSchema = z.object({
+  rows: z.array(TenantRowSchema),
+  summary_cards: z.array(SummaryCardSchema),
+  view_summaries: z.array(ViewSummarySchema),
+  default_view_key: z.string(),
+  filter_options: z.object({
+    occupancy_states: z.array(z.string()),
+    landlord_accounts: z.array(z.string()),
+    properties: z.array(
+      z.object({ label: z.string(), property_reference_id: z.string() }),
+    ),
+  }),
+});
+
+// ---------------------------------------------------------------------------
+// Landlords bootstrap
+// ---------------------------------------------------------------------------
+
+const LandlordRowSchema = z
+  .object({
+    landlord_account_id: z.string(),
+    display_name: z.string(),
+    service_tier: z.string().nullable(),
+    status: z.string(),
+    unit_count: z.number(),
+    active_tenancy_count: z.number(),
+    attention_state: z.string(),
+    target_date: z.string().nullable(),
+    view_keys: z.array(z.string()),
+  })
+  .passthrough();
+
+export const LandlordsBootstrapResponseSchema = z.object({
+  rows: z.array(LandlordRowSchema),
+  summary_cards: z.array(SummaryCardSchema),
+  view_summaries: z.array(ViewSummarySchema),
+  default_view_key: z.string(),
+});
