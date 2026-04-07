@@ -700,3 +700,89 @@ export interface LandlordProfileRequest {
   timezone?: string | null
   banking_preference?: string | null
 }
+
+// ── Phase 7: Occupied-Unit Takeover ──────────────────────────────────────────
+
+export interface TakeoverGapCreateRequest {
+  gap_category: string
+  description: string
+  severity: string
+  owner: string
+  due_date?: string | null
+  closure_evidence?: string | null
+}
+
+export interface TakeoverGapUpdateRequest {
+  status?: string | null
+  closure_evidence?: string | null
+  severity?: string | null
+  due_date?: string | null
+}
+
+export interface TakeoverGapResponse {
+  gap_id: string
+  onboarding_case_id: string
+  gap_category: string
+  description: string
+  severity: string
+  owner: string
+  due_date?: string | null
+  status: string
+  closure_evidence?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface TakeoverGapListResponse {
+  onboarding_case_id: string
+  gaps: TakeoverGapResponse[]
+}
+
+export interface TakeoverOpeningBalanceRequest {
+  outstanding_rent_aed: number
+  deposit_holder: string
+  deposit_amount_aed: number
+  deposit_basis: string
+  pending_utility_bills_aed: number
+  pending_maintenance_issues?: string | null
+  arrears_acknowledged: boolean
+  arrears_acknowledged_by?: string | null
+}
+
+export interface TakeoverOpeningBalanceResponse {
+  onboarding_case_id: string
+  outstanding_rent_aed: number
+  deposit_holder: string
+  deposit_amount_aed: number
+  deposit_basis: string
+  pending_utility_bills_aed: number
+  pending_maintenance_issues?: string | null
+  arrears_acknowledged: boolean
+  arrears_acknowledged_by?: string | null
+  opening_balance_locked_at: string
+  opening_balance_locked_by: string
+}
+
+export interface TakeoverPortalActivationRequest {
+  tenant_email: string
+  activation_confirmed: boolean
+  training_sent_at?: string | null
+}
+
+export interface TakeoverPortalActivationResponse {
+  onboarding_case_id: string
+  tenant_email: string
+  activation_confirmed: boolean
+  portal_user_created_at: string
+  portal_access_confirmed_at?: string | null
+  training_sent_at?: string | null
+}
+
+export interface OnboardingTakeoverStateResponse {
+  onboarding_case_id: string
+  onboarding_status: string
+  onboarding_route: string
+  property_unit_id: string
+  landlord_account_id: string
+  current_owner_role: string
+}

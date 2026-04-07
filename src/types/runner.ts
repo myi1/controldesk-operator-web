@@ -10,7 +10,8 @@ export type FieldType =
   | "select"
   | "checkbox"
   | "checklist"
-  | "reference-text";
+  | "reference-text"
+  | "user-picker";
 
 export interface SelectOption {
   value: string;
@@ -30,6 +31,8 @@ export interface FieldDef {
   min?: number;
   max?: number;
   defaultValue?: string | boolean | number;
+  /** For user-picker fields: filter users by this role */
+  filterRole?: string;
 }
 
 export interface RunnerStepDef {
@@ -46,7 +49,7 @@ export interface RunnerConfig {
   lifecycle: string;
   /** Path template — {id} is replaced with the record docname at POST time */
   endpoint: string;
-  method: "POST";
+  method: "POST" | "PUT" | "PATCH";
   mode: "modal" | "full-page";
   fixedPayload?: Record<string, unknown>;
   steps: RunnerStepDef[];
