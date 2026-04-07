@@ -93,7 +93,7 @@ function StepIndicator({
             {!isLast && (
               <div
                 className={cn(
-                  "mx-1 mb-4 h-px flex-1 transition-colors",
+                  "mx-1 mb-[18px] h-px flex-1 transition-colors",
                   isDone ? "bg-accent-primary" : "bg-border-default",
                 )}
                 aria-hidden="true"
@@ -170,7 +170,7 @@ export function WizardShell({
             className={cn(
               "fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2",
               "flex h-[90dvh] max-h-[640px] w-full max-w-lg flex-col",
-              "rounded-[var(--radius-lg)] border border-border-default bg-bg-default shadow-xl",
+              "rounded-[var(--radius-lg)] border border-border-default bg-bg-surface shadow-xl",
               "animate-in fade-in-0 zoom-in-95",
               "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
               "duration-[var(--duration-normal)]",

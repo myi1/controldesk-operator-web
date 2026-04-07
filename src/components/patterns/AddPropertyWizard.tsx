@@ -2,7 +2,7 @@
 // AddPropertyWizard — 4-step property creation wizard
 //
 // Step 1: Identity   — label, reference ID
-// Step 2: Address    — line1, line2, city, postcode
+// Step 2: Address    — UAE/Dubai format: building, unit, community, emirate
 // Step 3: Details    — stock types (multi-select), landlord accounts, notes
 // Step 4: Review     — read-only summary before submit
 //
@@ -32,15 +32,25 @@ const WIZARD_STEPS: WizardStep[] = [
   { label: "Review" },
 ];
 
-const UK_POSTCODE_RE = /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i;
+const UAE_EMIRATES = [
+  "Dubai",
+  "Abu Dhabi",
+  "Sharjah",
+  "Ajman",
+  "Ras Al Khaimah",
+  "Fujairah",
+  "Umm Al Quwain",
+];
 
 const FALLBACK_STOCK_TYPES = [
   "Residential",
-  "HMO",
   "Commercial",
+  "Retail",
   "Mixed Use",
-  "Student",
-  "Supported Living",
+  "Villa",
+  "Townhouse",
+  "Serviced Apartment",
+  "Labour Accommodation",
 ];
 
 /* ------------------------------------------------------------------ */
@@ -50,10 +60,11 @@ const FALLBACK_STOCK_TYPES = [
 interface FormData {
   property_label: string;
   property_reference_id: string;
-  line1: string;
-  line2: string;
-  city: string;
-  postcode: string;
+  // UAE address fields
+  building_name: string;
+  unit_number: string;
+  community: string;
+  emirate: string;
   stock_types: string[];
   landlord_account_ids: string[];
   notes: string;
@@ -62,10 +73,10 @@ interface FormData {
 const EMPTY_FORM: FormData = {
   property_label: "",
   property_reference_id: "",
-  line1: "",
-  line2: "",
-  city: "",
-  postcode: "",
+  building_name: "",
+  unit_number: "",
+  community: "",
+  emirate: "Dubai",
   stock_types: [],
   landlord_account_ids: [],
   notes: "",
@@ -128,7 +139,7 @@ function StepIdentity({
       <FieldRow label="Property Name" required error={errors.property_label}>
         <Input
           inputSize="lg"
-          placeholder="e.g. 12 Oak Street"
+          placeholder="e.g. Marina Gate Tower 1 – Unit 1204"
           value={data.property_label}
           onChange={(e) => onChange({ property_label: e.target.value })}
           aria-required="true"
@@ -155,7 +166,7 @@ function StepIdentity({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Step 2 — Address                                                    */
+/*  Step 2 — Address (UAE/Dubai)                                        */
 /* ------------------------------------------------------------------ */
 
 function StepAddress({
@@ -172,49 +183,64 @@ function StepAddress({
       <div className="flex items-center gap-2 text-fg-muted">
         <MapPin size={16} aria-hidden="true" />
         <p className="text-[length:var(--text-small-size)]">
-          Physical address of the property.
+          Property location within the UAE.
         </p>
       </div>
 
-      <FieldRow label="Address Line 1" required error={errors.line1}>
-        <Input
-          inputSize="lg"
-          placeholder="Street number and name"
-          value={data.line1}
-          onChange={(e) => onChange({ line1: e.target.value })}
-          autoFocus
-        />
-      </FieldRow>
-
-      <FieldRow label="Address Line 2" error={errors.line2}>
-        <Input
-          inputSize="lg"
-          placeholder="Flat, suite, building (optional)"
-          value={data.line2}
-          onChange={(e) => onChange({ line2: e.target.value })}
-        />
-      </FieldRow>
-
       <div className="grid grid-cols-2 gap-4">
-        <FieldRow label="City" required error={errors.city}>
+        <FieldRow label="Building Name" required error={errors.building_name}>
           <Input
             inputSize="lg"
-            placeholder="City"
-            value={data.city}
-            onChange={(e) => onChange({ city: e.target.value })}
+            placeholder="e.g. Marina Gate Tower 1"
+            value={data.building_name}
+            onChange={(e) => onChange({ building_name: e.target.value })}
+            autoFocus
           />
         </FieldRow>
 
-        <FieldRow label="Postcode" required error={errors.postcode}>
+        <FieldRow label="Unit / Apartment No." error={errors.unit_number}>
           <Input
             inputSize="lg"
-            placeholder="e.g. SW1A 1AA"
-            value={data.postcode}
-            onChange={(e) => onChange({ postcode: e.target.value.toUpperCase() })}
-            className="font-mono"
+            placeholder="e.g. 1204"
+            value={data.unit_number}
+            onChange={(e) => onChange({ unit_number: e.target.value })}
           />
         </FieldRow>
       </div>
+
+      <FieldRow label="Community / Area" required error={errors.community}>
+        <Input
+          inputSize="lg"
+          placeholder="e.g. Dubai Marina, Downtown Dubai, JBR"
+          value={data.community}
+          onChange={(e) => onChange({ community: e.target.value })}
+        />
+      </FieldRow>
+
+      <FieldRow label="Emirate" required error={errors.emirate}>
+        <div className="relative">
+          <select
+            value={data.emirate}
+            onChange={(e) => onChange({ emirate: e.target.value })}
+            className={cn(
+              "w-full appearance-none rounded-[var(--radius-md)] border border-border-default",
+              "bg-bg-surface px-3 py-2.5 text-[length:var(--text-small-size)] text-fg-default",
+              "outline-none transition-[border-color] duration-[var(--duration-fast)]",
+              "focus:border-border-focus focus:outline-2 focus:outline-offset-2 focus:outline-border-focus",
+              "cursor-pointer pr-8",
+            )}
+          >
+            {UAE_EMIRATES.map((e) => (
+              <option key={e} value={e}>{e}</option>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-fg-muted">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+        </div>
+      </FieldRow>
     </div>
   );
 }
@@ -378,9 +404,12 @@ function StepReview({
     .map((l) => l.label)
     .join(", ") || "—";
 
-  const address = [data.line1, data.line2, data.city, data.postcode]
-    .filter(Boolean)
-    .join(", ");
+  const address = [
+    data.unit_number ? `Unit ${data.unit_number}` : "",
+    data.building_name,
+    data.community,
+    data.emirate,
+  ].filter(Boolean).join(", ");
 
   return (
     <div className="flex flex-col gap-4">
@@ -431,7 +460,9 @@ export function AddPropertyWizard({ open, onClose, onSuccess }: AddPropertyWizar
   const { data: bootstrap } = usePropertiesBootstrap();
 
   const stockTypeOptions = useMemo(
-    () => bootstrap?.filter_options?.stock_types ?? FALLBACK_STOCK_TYPES,
+    () => bootstrap?.filter_options?.stock_types?.length
+      ? bootstrap.filter_options.stock_types
+      : FALLBACK_STOCK_TYPES,
     [bootstrap],
   );
 
@@ -480,13 +511,9 @@ export function AddPropertyWizard({ open, onClose, onSuccess }: AddPropertyWizar
     }
 
     if (step === 1) {
-      if (!formData.line1.trim()) errs.line1 = "Address line 1 is required.";
-      if (!formData.city.trim()) errs.city = "City is required.";
-      if (!formData.postcode.trim()) {
-        errs.postcode = "Postcode is required.";
-      } else if (!UK_POSTCODE_RE.test(formData.postcode.trim())) {
-        errs.postcode = "Enter a valid UK postcode (e.g. SW1A 1AA).";
-      }
+      if (!formData.building_name.trim()) errs.building_name = "Building name is required.";
+      if (!formData.community.trim()) errs.community = "Community / area is required.";
+      if (!formData.emirate.trim()) errs.emirate = "Emirate is required.";
     }
 
     if (step === 2) {
@@ -522,10 +549,14 @@ export function AddPropertyWizard({ open, onClose, onSuccess }: AddPropertyWizar
         property_reference_id: formData.property_reference_id.trim(),
       }),
       address: {
-        line1: formData.line1.trim(),
-        ...(formData.line2.trim() && { line2: formData.line2.trim() }),
-        city: formData.city.trim(),
-        postcode: formData.postcode.trim().toUpperCase(),
+        // Map UAE fields → generic address schema for the API
+        line1: [
+          formData.unit_number.trim() ? `Unit ${formData.unit_number.trim()}` : "",
+          formData.building_name.trim(),
+        ].filter(Boolean).join(", "),
+        line2: formData.community.trim() || undefined,
+        city: formData.emirate.trim(),
+        country: "UAE",
       },
       stock_types: formData.stock_types,
       landlord_account_ids: formData.landlord_account_ids,

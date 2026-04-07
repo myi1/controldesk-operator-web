@@ -428,7 +428,7 @@ export interface CreatePropertyPayload {
     line1: string;
     line2?: string;
     city: string;
-    postcode: string;
+    postcode?: string;
     country?: string;
   };
   stock_types: string[];
