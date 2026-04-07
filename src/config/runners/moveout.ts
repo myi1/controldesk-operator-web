@@ -326,9 +326,10 @@ export const MOVEOUT_RUNNERS: RunnerConfig[] = [
           {
             key: "description",
             label: "Description",
-            type: "text",
+            type: "textarea",
             required: true,
             placeholder: "e.g. Deep clean of kitchen and bathrooms",
+            hint: "Describe the reason for this deduction clearly.",
           },
           {
             key: "amount_aed",
@@ -336,6 +337,7 @@ export const MOVEOUT_RUNNERS: RunnerConfig[] = [
             type: "number",
             required: true,
             min: 0,
+            hint: "Enter the deduction amount in AED.",
           },
           {
             key: "evidence_reference",
@@ -401,9 +403,10 @@ export const MOVEOUT_RUNNERS: RunnerConfig[] = [
           {
             key: "description",
             label: "Description",
-            type: "text",
+            type: "textarea",
             required: true,
             placeholder: "e.g. Scuff marks on walls, broken door handle",
+            hint: "Describe the condition in detail to support any make-good work.",
           },
           {
             key: "make_good_required",
@@ -433,7 +436,7 @@ export const MOVEOUT_RUNNERS: RunnerConfig[] = [
     ],
     invalidates: INVALIDATES,
     successMessage: "Dilapidation items recorded.",
-    allowedRoles: ["Move Team", "PM Coordinator", "PM Manager / Senior PM Coordinator"],
+    allowedRoles: ["Inspections / Move Team", "PM Coordinator", "PM Manager / Senior PM Coordinator"],
   },
 ];
 
