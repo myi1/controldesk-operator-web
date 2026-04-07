@@ -34,6 +34,9 @@ import type {
   VendorDetailResponse,
   CreateVendorPayload,
   CreateVendorResponse,
+  InspectionsBootstrapResponse,
+  CreateInspectionCaseRequest,
+  CreateInspectionCaseResponse,
 } from "../types/api";
 
 export async function fetchPropertiesBootstrap(): Promise<PropertiesBootstrapResponse> {
@@ -189,4 +192,14 @@ export async function setMoveOutDilapidation(
     `/api/v1/operator-shell/moveout-cases/${moveoutCaseId}/dilapidation`,
     payload,
   );
+}
+
+export async function fetchInspectionsBootstrap(): Promise<InspectionsBootstrapResponse> {
+  return apiGet<InspectionsBootstrapResponse>("/api/v1/operator-shell/inspections/bootstrap");
+}
+
+export async function createInspectionCase(
+  payload: CreateInspectionCaseRequest,
+): Promise<CreateInspectionCaseResponse> {
+  return apiPost<CreateInspectionCaseResponse>("/api/v1/operator-shell/inspections", payload);
 }

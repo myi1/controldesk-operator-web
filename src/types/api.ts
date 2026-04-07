@@ -849,3 +849,52 @@ export interface MoveOutDilapidationResponse {
   items: DilapidationItem[];
   total_make_good_estimate_aed: number;
 }
+
+export interface InspectionCaseRow {
+  entity_id: string;
+  property_unit_id: string;
+  tenancy_record_id: string;
+  landlord_account_id: string;
+  inspection_type: string;
+  frequency: string;
+  scheduled_date?: string | null;
+  actual_date?: string | null;
+  status: string;
+  overall_condition?: string | null;
+  make_good_required: boolean;
+  current_owner_role: string;
+  inspector_name: string;
+  dilapidation_count: number;
+}
+
+export interface InspectionsBootstrapResponse {
+  inspection_rows: InspectionCaseRow[];
+  total_count: number;
+  scheduled_count: number;
+  in_progress_count: number;
+  completed_count: number;
+  make_good_required_count: number;
+}
+
+export interface CreateInspectionCaseRequest {
+  property_unit_id: string;
+  tenancy_record_id?: string;
+  landlord_account_id?: string;
+  inspection_type?: string;
+  frequency?: string;
+  scheduled_date?: string;
+  current_owner_role?: string;
+  inspector_name?: string;
+  source_case_id?: string;
+  source_case_type?: string;
+}
+
+export interface CreateInspectionCaseResponse {
+  entity_id: string;
+  property_unit_id: string;
+  inspection_type: string;
+  frequency: string;
+  scheduled_date?: string | null;
+  status: string;
+  current_owner_role: string;
+}

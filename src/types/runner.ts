@@ -44,9 +44,9 @@ export interface RunnerConfig {
   title: string;
   description: string;
   lifecycle: string;
-  /** Path template — {id} is replaced with the record docname at POST time */
+  /** Path template — {id} is replaced with the record docname at call time */
   endpoint: string;
-  method: "POST";
+  method: "POST" | "PUT";
   mode: "modal" | "full-page";
   fixedPayload?: Record<string, unknown>;
   steps: RunnerStepDef[];
