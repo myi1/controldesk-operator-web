@@ -127,6 +127,13 @@ const ProtectedActionSchema = z.object({
   ref_doctype: z.string().optional(),
 });
 
+const AvailableActionSchema = z.object({
+  action_key: z.string(),
+  target_status: z.string(),
+  label: z.string(),
+  confirmation_required: z.boolean(),
+});
+
 export const CaseDetailResponseSchema = z.object({
   detail: z.object({
     doctype: z.string(),
@@ -142,6 +149,7 @@ export const CaseDetailResponseSchema = z.object({
   field_snapshot: z.array(FieldSnapshot),
   context_sections: z.array(ContextSectionSchema),
   protected_actions: z.array(ProtectedActionSchema),
+  available_actions: z.array(AvailableActionSchema).optional(),
   blocker_banner: z.object({ reason: z.string(), message: z.string() }).optional(),
   limitations: z.array(z.string()),
 });

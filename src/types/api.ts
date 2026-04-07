@@ -116,11 +116,20 @@ export interface LinkedReference {
 
 // ---- Case detail ----
 
+export interface AvailableAction {
+  /** '{lifecycle}.{target_status}' — matches RUNNER_REGISTRY key */
+  action_key: string;
+  target_status: string;
+  label: string;
+  confirmation_required: boolean;
+}
+
 export interface CaseDetailResponse {
   detail: CaseDetail;
   field_snapshot: FieldSnapshot[];
   context_sections: ContextSection[];
   protected_actions: ProtectedAction[];
+  available_actions?: AvailableAction[];
   blocker_banner?: BlockerBanner;
   limitations: string[];
 }

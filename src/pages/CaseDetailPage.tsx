@@ -10,12 +10,16 @@ import {
 } from "lucide-react";
 import { cn } from "../lib/cn";
 import { ACTION_KEYS } from "../config/action-keys";
+import { RUNNER_REGISTRY } from "../config/runners";
+import { isConfirmActionConfig, type RunnerConfig, type ConfirmActionConfig } from "../types/runner";
+import { TransitionRunner, ConfirmActionRunner } from "../components/runners";
 import { useCaseDetail, useCaseAuditTimeline } from "../hooks/use-case-detail";
 import { useAction } from "../hooks/use-action";
 import { useRoleGate } from "../hooks/use-role-gate";
 import { useToast } from "../components/patterns/NotificationToast";
 import type {
   ProtectedAction,
+  AvailableAction,
   FieldSnapshot,
   ContextSection,
   AuditTimelineEntry,
@@ -676,16 +680,28 @@ function RelatedTab({
 
 function ActionsTab({
   actions,
+  availableActions: lifecycleTransitions,
   userRoles,
   onExecuteAction,
   executingActionKey,
 }: {
   actions: ProtectedAction[];
+  availableActions?: AvailableAction[];
   userRoles: string[];
   onExecuteAction: (actionKey: string) => void;
   executingActionKey: string | null;
 }) {
   const roleSet = useMemo(() => new Set(userRoles), [userRoles]);
+
+  // De-duplicate: skip lifecycle transitions already shown in protected_actions
+  const protectedActionKeys = useMemo(
+    () => new Set(actions.map((a) => a.action_key)),
+    [actions],
+  );
+  const dedupedTransitions = useMemo(
+    () => (lifecycleTransitions ?? []).filter((a) => !protectedActionKeys.has(a.action_key)),
+    [lifecycleTransitions, protectedActionKeys],
+  );
 
   const availableActions = useMemo(
     () => actions.filter((a) => a.available_roles.some((r) => roleSet.has(r))),
@@ -698,7 +714,7 @@ function ActionsTab({
     [actions, roleSet],
   );
 
-  if (actions.length === 0) {
+  if (actions.length === 0 && dedupedTransitions.length === 0) {
     return (
       <EmptyState
         icon={ShieldCheck}
@@ -710,6 +726,49 @@ function ActionsTab({
 
   return (
     <div className="space-y-6">
+      {/* Lifecycle transitions — from available_actions (runner engine) */}
+      {dedupedTransitions.length > 0 && (
+        <section>
+          <h3
+            className={cn(
+              "flex items-center gap-1.5",
+              "text-[length:var(--text-small-size)] leading-[var(--text-small-leading)]",
+              "font-[number:var(--text-body-medium-weight)]",
+              "text-fg-default mb-3",
+            )}
+          >
+            <Send size={14} aria-hidden="true" />
+            Transitions
+          </h3>
+          <div className="space-y-3">
+            {dedupedTransitions.map((action) => (
+              <div
+                key={action.action_key}
+                className="flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border border-border-default bg-bg-default p-4"
+              >
+                <p
+                  className={cn(
+                    "text-[length:var(--text-small-size)] leading-[var(--text-small-leading)]",
+                    "font-[number:var(--text-body-medium-weight)]",
+                    "text-fg-default min-w-0",
+                  )}
+                >
+                  {action.label}
+                </p>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  loading={executingActionKey === action.action_key}
+                  onClick={() => onExecuteAction(action.action_key)}
+                >
+                  {action.confirmation_required ? "Confirm" : "Run"}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Available to you */}
       {availableActions.length > 0 && (
         <section>
@@ -857,6 +916,12 @@ export default function CaseDetailPage() {
     null,
   );
 
+  // Runner engine state
+  const [runnerOpen, setRunnerOpen] = useState(false);
+  const [confirmRunnerOpen, setConfirmRunnerOpen] = useState(false);
+  const [activeRunnerConfig, setActiveRunnerConfig] = useState<RunnerConfig | null>(null);
+  const [activeConfirmConfig, setActiveConfirmConfig] = useState<ConfirmActionConfig | null>(null);
+
   // Note state
   const [noteText, setNoteText] = useState("");
   const [addingNote, setAddingNote] = useState(false);
@@ -919,9 +984,23 @@ export default function CaseDetailPage() {
     [caseType, caseId, userRoles, actionMutation, toast, refetchDetail, queryClient],
   );
 
-  // Action handler — routes to dialog or direct execution
+  // Action handler — runner registry first, then legacy dialog
   const handleAction = useCallback(
     (actionKey: string) => {
+      // Check runner registry — if found, open the appropriate runner
+      const runnerConfig = RUNNER_REGISTRY.get(actionKey);
+      if (runnerConfig) {
+        if (isConfirmActionConfig(runnerConfig)) {
+          setActiveConfirmConfig(runnerConfig);
+          setConfirmRunnerOpen(true);
+        } else {
+          setActiveRunnerConfig(runnerConfig);
+          setRunnerOpen(true);
+        }
+        return;
+      }
+
+      // Legacy fallback — existing confirm dialog + useAction() flow
       const action = actions.find((a) => a.action_key === actionKey);
       if (!action) return;
 
@@ -1088,6 +1167,7 @@ export default function CaseDetailPage() {
           {activeTab === "actions" && (
             <ActionsTab
               actions={actions}
+              availableActions={detailResponse?.available_actions}
               userRoles={userRoles}
               onExecuteAction={handleAction}
               executingActionKey={executingActionKey}
@@ -1156,6 +1236,30 @@ export default function CaseDetailPage() {
         confirmVariant="danger"
         onConfirm={handleDiscardConfirm}
       />
+
+      {/* Runner portals */}
+      {activeRunnerConfig && caseId && (
+        <TransitionRunner
+          open={runnerOpen}
+          onOpenChange={(open) => {
+            setRunnerOpen(open);
+            if (!open) setActiveRunnerConfig(null);
+          }}
+          config={activeRunnerConfig}
+          recordId={caseId}
+        />
+      )}
+      {activeConfirmConfig && caseId && (
+        <ConfirmActionRunner
+          open={confirmRunnerOpen}
+          onOpenChange={(open) => {
+            setConfirmRunnerOpen(open);
+            if (!open) setActiveConfirmConfig(null);
+          }}
+          config={activeConfirmConfig}
+          recordId={caseId}
+        />
+      )}
     </div>
   );
 }
