@@ -14,6 +14,12 @@ import type {
   PropertyContextBootstrapResponse,
   TenantsBootstrapResponse,
   LandlordsBootstrapResponse,
+  LandlordDetailResponse,
+  LandlordApprovalMatrixRequest,
+  LandlordBankDetailsRequest,
+  LandlordKycRequest,
+  LandlordFeeAgreementRequest,
+  LandlordProfileRequest,
 } from "../types/api";
 
 export async function fetchPropertiesBootstrap(): Promise<PropertiesBootstrapResponse> {
@@ -61,6 +67,45 @@ export async function fetchTenantsBootstrap(): Promise<TenantsBootstrapResponse>
 
 export async function fetchLandlordsBootstrap(): Promise<LandlordsBootstrapResponse> {
   return apiGet<LandlordsBootstrapResponse>("/api/v1/landlords/bootstrap");
+}
+
+export async function fetchLandlordDetail(landlordId: string): Promise<LandlordDetailResponse> {
+  return apiGet<LandlordDetailResponse>(`/api/v1/landlords/${landlordId}`);
+}
+
+export async function updateLandlordApprovalMatrix(
+  landlordId: string,
+  payload: LandlordApprovalMatrixRequest,
+): Promise<LandlordDetailResponse> {
+  return apiPut<LandlordDetailResponse>(`/api/v1/landlords/${landlordId}/approval-matrix`, payload);
+}
+
+export async function updateLandlordBankDetails(
+  landlordId: string,
+  payload: LandlordBankDetailsRequest,
+): Promise<LandlordDetailResponse> {
+  return apiPut<LandlordDetailResponse>(`/api/v1/landlords/${landlordId}/bank-details`, payload);
+}
+
+export async function updateLandlordKyc(
+  landlordId: string,
+  payload: LandlordKycRequest,
+): Promise<LandlordDetailResponse> {
+  return apiPut<LandlordDetailResponse>(`/api/v1/landlords/${landlordId}/kyc`, payload);
+}
+
+export async function updateLandlordFeeAgreement(
+  landlordId: string,
+  payload: LandlordFeeAgreementRequest,
+): Promise<LandlordDetailResponse> {
+  return apiPut<LandlordDetailResponse>(`/api/v1/landlords/${landlordId}/fee-agreement`, payload);
+}
+
+export async function updateLandlordProfile(
+  landlordId: string,
+  payload: LandlordProfileRequest,
+): Promise<LandlordDetailResponse> {
+  return apiPut<LandlordDetailResponse>(`/api/v1/landlords/${landlordId}/profile`, payload);
 }
 
 // ---- Property Context ----

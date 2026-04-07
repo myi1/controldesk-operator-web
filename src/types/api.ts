@@ -590,6 +590,9 @@ export interface LandlordRow {
   attention_state: string
   target_date: string | null
   view_keys: string[]
+  kyc_complete: boolean
+  bank_details_complete: boolean
+  approval_matrix_complete: boolean
 }
 
 export interface LandlordsBootstrapResponse {
@@ -597,4 +600,103 @@ export interface LandlordsBootstrapResponse {
   summary_cards: SummaryCard[]
   view_summaries: ViewSummary[]
   default_view_key: string
+}
+
+export interface LandlordDetailResponse {
+  landlord_account_id: string
+  display_name: string
+  service_tier: string | null
+  status: string
+  unit_count: number
+  active_tenancy_count: number
+  unit_ids: string[]
+  tenancy_ids: string[]
+  // Approval matrix
+  maintenance_threshold_per_job_aed: number | null
+  emergency_authority_aed: number | null
+  approval_contact_name: string | null
+  approval_contact_channel: string | null
+  response_window_hours: number | null
+  // Bank details
+  bank_beneficiary_name: string | null
+  bank_name: string | null
+  bank_iban: string | null
+  bank_currency: string | null
+  bank_authority_proof_ref: string | null
+  bank_payment_confirmation_contact: string | null
+  bank_details_verified_at: string | null
+  bank_details_verified_by: string | null
+  // KYC
+  kyc_passport_ref: string | null
+  kyc_visa_ref: string | null
+  kyc_title_deed_ref: string | null
+  kyc_company_docs_ref: string | null
+  kyc_poa_ref: string | null
+  kyc_completed_at: string | null
+  kyc_verified_by: string | null
+  // Fee agreement
+  fee_basis_type: string | null
+  fee_percentage: number | null
+  fixed_fee_amount_aed: number | null
+  vat_applicable: boolean | null
+  billing_cycle: string | null
+  internal_family_account: boolean | null
+  fee_exception_note: string | null
+  // Profile
+  reporting_recipients: string | null
+  preferred_channel: string | null
+  language: string | null
+  timezone: string | null
+  banking_preference: string | null
+  // Readiness indicators
+  kyc_complete: boolean
+  bank_details_complete: boolean
+  approval_matrix_complete: boolean
+}
+
+export interface LandlordApprovalMatrixRequest {
+  maintenance_threshold_per_job_aed?: number | null
+  emergency_authority_aed?: number | null
+  approval_contact_name?: string | null
+  approval_contact_channel?: string | null
+  response_window_hours?: number | null
+}
+
+export interface LandlordBankDetailsRequest {
+  bank_beneficiary_name?: string | null
+  bank_name?: string | null
+  bank_iban?: string | null
+  bank_currency?: string | null
+  bank_authority_proof_ref?: string | null
+  bank_payment_confirmation_contact?: string | null
+  bank_details_verified_at?: string | null
+  bank_details_verified_by?: string | null
+}
+
+export interface LandlordKycRequest {
+  kyc_passport_ref?: string | null
+  kyc_visa_ref?: string | null
+  kyc_title_deed_ref?: string | null
+  kyc_company_docs_ref?: string | null
+  kyc_poa_ref?: string | null
+  kyc_completed_at?: string | null
+  kyc_verified_by?: string | null
+}
+
+export interface LandlordFeeAgreementRequest {
+  fee_basis_type?: string | null
+  fee_percentage?: number | null
+  fixed_fee_amount_aed?: number | null
+  vat_applicable?: boolean | null
+  billing_cycle?: string | null
+  internal_family_account?: boolean | null
+  fee_exception_note?: string | null
+}
+
+export interface LandlordProfileRequest {
+  reporting_recipients?: string | null
+  preferred_channel?: string | null
+  language?: string | null
+  timezone?: string | null
+  banking_preference?: string | null
 }
