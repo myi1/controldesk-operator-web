@@ -11,6 +11,81 @@ const INVALIDATES = ["inspections-bootstrap"];
 
 export const INSPECTION_RUNNERS: RunnerConfig[] = [
   {
+    id: "inspection.schedule",
+    title: "Schedule Inspection",
+    description: "Create a new inspection case for a unit.",
+    lifecycle: "inspection",
+    endpoint: BASE,
+    method: "POST",
+    mode: "modal",
+    autoFields: false,
+    steps: [
+      {
+        label: "Inspection Details",
+        description: "Enter the unit and inspection schedule details.",
+        fields: [
+          {
+            key: "property_unit_id",
+            label: "Unit ID",
+            type: "text",
+            required: true,
+            placeholder: "e.g. UNIT-00123",
+            hint: "The unit this inspection is for.",
+          },
+          {
+            key: "inspection_type",
+            label: "Inspection Type",
+            type: "select",
+            required: true,
+            options: [
+              { value: "periodic", label: "Periodic" },
+              { value: "move_in", label: "Move-In" },
+              { value: "move_out", label: "Move-Out" },
+              { value: "complaint_driven", label: "Complaint Driven" },
+              { value: "handover", label: "Handover" },
+            ],
+            defaultValue: "periodic",
+          },
+          {
+            key: "frequency",
+            label: "Frequency",
+            type: "select",
+            required: true,
+            options: [
+              { value: "one_off", label: "One-Off" },
+              { value: "quarterly", label: "Quarterly" },
+              { value: "biannual", label: "Biannual" },
+              { value: "annual", label: "Annual" },
+            ],
+            defaultValue: "one_off",
+          },
+          {
+            key: "scheduled_date",
+            label: "Scheduled Date",
+            type: "date",
+            required: false,
+            hint: "Leave blank to schedule later.",
+          },
+          {
+            key: "inspector_name",
+            label: "Inspector Name",
+            type: "text",
+            required: false,
+            placeholder: "e.g. Ahmed Al-Farsi",
+          },
+        ],
+      },
+    ],
+    invalidates: INVALIDATES,
+    successMessage: "Inspection scheduled.",
+    allowedRoles: [
+      "Inspections / Move Team",
+      "PM Coordinator",
+      "PM Manager / Senior PM Coordinator",
+      "PM Head",
+    ],
+  },
+  {
     id: "inspection.start",
     title: "Start Inspection",
     description: "Mark inspection as in-progress with inspector details.",

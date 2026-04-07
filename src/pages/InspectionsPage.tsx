@@ -16,6 +16,11 @@ import {
 import { cn } from "../lib/cn";
 import { useInspectionsBootstrap } from "../hooks/use-properties";
 import type { InspectionCaseRow } from "../types/api";
+import { TransitionRunner } from "../components/runners";
+import { RUNNER_REGISTRY } from "../config/runners";
+import type { RunnerConfig } from "../types/runner";
+
+const SCHEDULE_RUNNER = RUNNER_REGISTRY.get("inspection.schedule") as RunnerConfig | undefined;
 
 /* ------------------------------------------------------------------ */
 /*  Status config                                                       */
@@ -394,6 +399,7 @@ export default function InspectionsPage() {
     useInspectionsBootstrap();
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [scheduleOpen, setScheduleOpen] = useState(false);
 
   const filteredRows = useMemo(() => {
     if (!data) return [];
@@ -451,6 +457,7 @@ export default function InspectionsPage() {
   if (!data) return null;
 
   return (
+    <>
     <div className="flex h-full flex-col overflow-hidden">
       {/* Page header */}
       <div className="border-b border-border-default bg-bg-surface px-6 py-4">
@@ -469,13 +476,14 @@ export default function InspectionsPage() {
             )}
           </div>
           <button
-            onClick={() => void refetch()}
+            onClick={() => setScheduleOpen(true)}
+            disabled={!SCHEDULE_RUNNER}
             className={cn(
-              "flex items-center gap-1.5 rounded-[var(--radius-md)] border border-border-default",
-              "px-3 py-1.5 text-[length:var(--text-small-size)] text-fg-muted",
-              "hover:bg-bg-muted hover:text-fg-default transition-colors duration-150",
+              "flex items-center gap-1.5 rounded-[var(--radius-md)]",
+              "bg-action-primary-default px-3 py-1.5 text-[length:var(--text-small-size)] text-white",
+              "hover:bg-action-primary-hover transition-colors duration-150",
               "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
-              "cursor-pointer",
+              "disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer",
             )}
           >
             <Calendar size={13} aria-hidden="true" />
@@ -580,5 +588,16 @@ export default function InspectionsPage() {
         </div>
       </div>
     </div>
+
+    {/* Schedule Inspection runner modal */}
+    {SCHEDULE_RUNNER && (
+      <TransitionRunner
+        open={scheduleOpen}
+        onOpenChange={setScheduleOpen}
+        config={SCHEDULE_RUNNER}
+        recordId=""
+      />
+    )}
+    </>
   );
 }
