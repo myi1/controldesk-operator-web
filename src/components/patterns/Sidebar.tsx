@@ -1,6 +1,6 @@
 import { memo, useState, useMemo } from "react";
 import { NavLink } from "react-router-dom";
-import { ChevronDown, Building2, BarChart3, DoorOpen, Users, Briefcase } from "lucide-react";
+import { ChevronDown, Building2, BarChart3, DoorOpen, Users, Briefcase, ShieldAlert } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { Separator } from "../primitives/Separator";
 import { Tooltip } from "../primitives/Tooltip";
@@ -27,6 +27,7 @@ const PMS_ENTRIES = [
   { key: "units", label: "Units", path: "/units", icon: <DoorOpen size={14} aria-hidden="true" /> },
   { key: "tenants", label: "Tenants", path: "/tenants", icon: <Users size={14} aria-hidden="true" /> },
   { key: "landlords", label: "Landlords", path: "/landlords", icon: <Briefcase size={14} aria-hidden="true" /> },
+  { key: "oversight", label: "Oversight", path: "/oversight", icon: <ShieldAlert size={14} aria-hidden="true" /> },
 ] as const;
 
 function PmsSidebarGroup({ collapsed }: { collapsed: boolean }) {

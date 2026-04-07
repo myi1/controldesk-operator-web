@@ -21,6 +21,7 @@ const PortfolioPage = lazy(() => import("./pages/PortfolioPage"));
 const UnitsPage = lazy(() => import("./pages/UnitsPage"));
 const TenantsPage = lazy(() => import("./pages/TenantsPage"));
 const LandlordsPage = lazy(() => import("./pages/LandlordsPage"));
+const ManagerOversightPage = lazy(() => import("./pages/ManagerOversightPage"));
 
 /* ------------------------------------------------------------------ */
 /*  Login page fallback (outside AppShell, needs its own Suspense)     */
@@ -107,6 +108,10 @@ export const router = createHashRouter([
       {
         path: "landlords",
         element: <LandlordsPage />,
+      },
+      {
+        path: "oversight",
+        element: <ManagerOversightPage />,
       },
 
       // Settings

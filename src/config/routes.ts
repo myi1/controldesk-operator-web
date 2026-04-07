@@ -33,6 +33,9 @@ export const ROUTE_PATHS = {
   tenants: "/tenants",
   landlords: "/landlords",
 
+  // Manager oversight (Phase 8)
+  oversight: "/oversight",
+
   // Settings
   settings: "/settings",
 

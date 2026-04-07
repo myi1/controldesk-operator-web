@@ -786,3 +786,43 @@ export interface OnboardingTakeoverStateResponse {
   landlord_account_id: string
   current_owner_role: string
 }
+
+// ---- Manager Oversight Bootstrap ----
+
+export interface ManagerOversightBootstrapResponse {
+  status: string;
+  escalation_case_count: number;
+  pending_approval_count: number;
+  sla_breach_count: number;
+  blocked_case_count: number;
+  overdue_instalments_count: number;
+  inspection_due_count: number;
+  renewal_deadline_count: number;
+  ejari_pending_count: number;
+  escalation_cases: Record<string, unknown>[];
+  pending_approvals: Record<string, unknown>[];
+  sla_breaches: Record<string, unknown>[];
+  blocked_cases: Record<string, unknown>[];
+}
+
+// ---- Phase 8: SLA & Notification Engine ----
+
+export interface SLABreachSummary {
+  entity_id: string | null;
+  case_type: string | null;
+  case_id: string | null;
+  clock_code: string | null;
+  current_owner_role: string | null;
+  breach_reason: string | null;
+  breach_time: string | null;
+  target_time: string | null;
+  breach_hours: number | null;
+  escalation_state: string | null;
+}
+
+export interface ProcessRemindersResponse {
+  status: string;
+  sla_clocks_breached: number;
+  reminder_events_created: number;
+  actions_taken: string[];
+}
