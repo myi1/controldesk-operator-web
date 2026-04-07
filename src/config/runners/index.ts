@@ -15,7 +15,7 @@ import { ONBOARDING_RUNNERS, ONBOARDING_CONFIRM_ACTIONS } from "./onboarding";
 import { VACANCY_RUNNERS, VACANCY_CONFIRM_ACTIONS } from "./vacancy";
 import { TENANCY_RUNNERS } from "./tenancy";
 import { MOVEOUT_RUNNERS, MOVEOUT_CONFIRM_ACTIONS } from "./moveout";
-import { RENEWAL_RUNNERS, RENEWAL_CONFIRM_ACTIONS } from "./renewal";
+import { RENEWAL_RUNNERS, RENEWAL_CONFIRM_ACTIONS, RENEWAL_LEGAL_RUNNERS } from "./renewal";
 import { RECEIVABLES_RUNNERS } from "./receivables";
 import { MAINTENANCE_RUNNERS } from "./maintenance";
 import { SERVICE_RECOVERY_RUNNERS } from "./service-recovery";
@@ -30,6 +30,7 @@ const ALL_CONFIGS: AnyRunnerConfig[] = [
   ...MOVEOUT_RUNNERS,
   ...MOVEOUT_CONFIRM_ACTIONS,
   ...RENEWAL_RUNNERS,
+  ...RENEWAL_LEGAL_RUNNERS,
   ...RENEWAL_CONFIRM_ACTIONS,
   ...RECEIVABLES_RUNNERS,
   ...MAINTENANCE_RUNNERS,

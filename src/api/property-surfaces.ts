@@ -18,6 +18,12 @@ import type {
   TenancyPaymentScheduleResponse,
   TenancyEjariStatusUpdateRequest,
   TenancyEjariStatusResponse,
+  TenancyRdcDisputeUpdateRequest,
+  TenancyRdcDisputeResponse,
+  RenewalDldIndexUpdateRequest,
+  RenewalDldIndexResponse,
+  RenewalArticleNoticeRequest,
+  RenewalArticleNoticeResponse,
 } from "../types/api";
 
 export async function fetchPropertiesBootstrap(): Promise<PropertiesBootstrapResponse> {
@@ -97,6 +103,36 @@ export async function updateTenancyEjariStatus(
 ): Promise<TenancyEjariStatusResponse> {
   return apiPut<TenancyEjariStatusResponse>(
     `/api/v1/operator-shell/tenancy-records/${tenancyRecordId}/ejari-status`,
+    payload,
+  );
+}
+
+export async function updateTenancyRdcDispute(
+  tenancyRecordId: string,
+  payload: TenancyRdcDisputeUpdateRequest,
+): Promise<TenancyRdcDisputeResponse> {
+  return apiPut<TenancyRdcDisputeResponse>(
+    `/api/v1/operator-shell/tenancy-records/${tenancyRecordId}/rdc-dispute`,
+    payload,
+  );
+}
+
+export async function updateRenewalDldIndex(
+  renewalCaseId: string,
+  payload: RenewalDldIndexUpdateRequest,
+): Promise<RenewalDldIndexResponse> {
+  return apiPut<RenewalDldIndexResponse>(
+    `/api/v1/operator-shell/renewal-cases/${renewalCaseId}/dld-index`,
+    payload,
+  );
+}
+
+export async function recordRenewalArticleNotice(
+  renewalCaseId: string,
+  payload: RenewalArticleNoticeRequest,
+): Promise<RenewalArticleNoticeResponse> {
+  return apiPut<RenewalArticleNoticeResponse>(
+    `/api/v1/operator-shell/renewal-cases/${renewalCaseId}/article-notice`,
     payload,
   );
 }

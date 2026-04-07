@@ -292,6 +292,118 @@ export const RENEWAL_RUNNERS: RunnerConfig[] = [
   },
 ];
 
+export const RENEWAL_LEGAL_RUNNERS: RunnerConfig[] = [
+  {
+    id: "renewal.dld_index_check",
+    title: "Record DLD Rental Index",
+    description: "Record the DLD Rental Index check, permitted increase percentage, and reference document.",
+    lifecycle: "renewal",
+    endpoint: `${BASE}/{id}/dld-index`,
+    method: "PUT",
+    mode: "modal",
+    steps: [
+      {
+        label: "DLD Rental Index",
+        description: "Enter the DLD Rental Index data for this renewal.",
+        fields: [
+          {
+            key: "dld_rental_index_current_market_aed",
+            label: "Current Market Rent (AED)",
+            type: "number",
+            required: true,
+          },
+          {
+            key: "dld_rental_index_increase_permitted_pct",
+            label: "Permitted Increase (%)",
+            type: "number",
+            required: true,
+          },
+          {
+            key: "dld_rental_index_reference",
+            label: "DLD Index Reference",
+            type: "text",
+            required: true,
+            placeholder: "DLD-IDX-2026-00001",
+          },
+          {
+            key: "dld_rental_index_checked_by",
+            label: "Checked By",
+            type: "text",
+            required: true,
+            placeholder: "Staff name or ID",
+          },
+        ],
+      },
+    ],
+    invalidates: INVALIDATES,
+    successMessage: "DLD Rental Index recorded.",
+    allowedRoles: [
+      "PM Coordinator",
+      "PM Manager / Senior PM Coordinator",
+      "Admin / Ejari / Documentation",
+    ],
+  },
+
+  {
+    id: "renewal.article_notice_record",
+    title: "Record Article Notice Served",
+    description: "Record that an Article 14 (rent increase) or Article 25 (eviction) legal notice has been served.",
+    lifecycle: "renewal",
+    endpoint: `${BASE}/{id}/article-notice`,
+    method: "PUT",
+    mode: "modal",
+    steps: [
+      {
+        label: "Article Notice",
+        description: "Record the legal notice type, service date, and method.",
+        fields: [
+          {
+            key: "article_notice_type",
+            label: "Notice Type",
+            type: "select",
+            required: true,
+            options: [
+              { value: "article_14", label: "Article 14 (Rent Increase)" },
+              { value: "article_25", label: "Article 25 (Eviction)" },
+            ],
+          },
+          {
+            key: "article_notice_served_at",
+            label: "Date Served",
+            type: "date",
+            required: true,
+          },
+          {
+            key: "article_notice_service_method",
+            label: "Service Method",
+            type: "select",
+            required: true,
+            options: [
+              { value: "email", label: "Email" },
+              { value: "registered_post", label: "Registered Post" },
+              { value: "notary", label: "Notary" },
+            ],
+          },
+          {
+            key: "article_notice_reference",
+            label: "Notice Reference",
+            type: "text",
+            required: false,
+            placeholder: "NTC-2026-00001",
+          },
+        ],
+      },
+    ],
+    invalidates: INVALIDATES,
+    successMessage: "Article notice recorded.",
+    allowedRoles: [
+      "PM Coordinator",
+      "PM Manager / Senior PM Coordinator",
+      "Admin / Ejari / Documentation",
+    ],
+  },
+];
+
 export const RENEWAL_CONFIRM_ACTIONS: ConfirmActionConfig[] = [
   {
     id: "renewal.send_reletting_handoff",

@@ -613,6 +613,11 @@ export interface TenancyRecordRow {
   ejari_registered_at?: string | null
   ejari_expires_at?: string | null
   payment_schedule_count?: number
+  rdc_dispute_active?: boolean
+  rdc_dispute_case_number?: string | null
+  rdc_dispute_opened_at?: string | null
+  rdc_dispute_resolved_at?: string | null
+  rdc_dispute_outcome?: string | null
 }
 
 export interface PaymentScheduleInstalment {
@@ -651,4 +656,53 @@ export interface TenancyEjariStatusResponse {
   ejari_contract_number?: string | null;
   ejari_registered_at?: string | null;
   ejari_expires_at?: string | null;
+}
+
+export interface TenancyRdcDisputeUpdateRequest {
+  rdc_dispute_active: boolean;
+  rdc_dispute_case_number?: string | null;
+  rdc_dispute_opened_at?: string | null;
+  rdc_dispute_resolved_at?: string | null;
+  rdc_dispute_outcome?: string | null;
+}
+
+export interface TenancyRdcDisputeResponse {
+  tenancy_record_id: string;
+  rdc_dispute_active: boolean;
+  rdc_dispute_case_number?: string | null;
+  rdc_dispute_opened_at?: string | null;
+  rdc_dispute_resolved_at?: string | null;
+  rdc_dispute_outcome?: string | null;
+}
+
+export interface RenewalDldIndexUpdateRequest {
+  dld_rental_index_current_market_aed: number;
+  dld_rental_index_increase_permitted_pct: number;
+  dld_rental_index_reference: string;
+  dld_rental_index_checked_by: string;
+}
+
+export interface RenewalDldIndexResponse {
+  renewal_case_id: string;
+  dld_rental_index_checked: boolean;
+  dld_rental_index_current_market_aed?: number | null;
+  dld_rental_index_increase_permitted_pct?: number | null;
+  dld_rental_index_reference?: string | null;
+  dld_rental_index_checked_at?: string | null;
+  dld_rental_index_checked_by?: string | null;
+}
+
+export interface RenewalArticleNoticeRequest {
+  article_notice_type: string;
+  article_notice_served_at: string;
+  article_notice_service_method: string;
+  article_notice_reference?: string | null;
+}
+
+export interface RenewalArticleNoticeResponse {
+  renewal_case_id: string;
+  article_notice_type?: string | null;
+  article_notice_served_at?: string | null;
+  article_notice_service_method?: string | null;
+  article_notice_reference?: string | null;
 }
