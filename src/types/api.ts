@@ -4,6 +4,20 @@
 
 // ---- Bootstrap ----
 
+export interface BootstrapFormOptions {
+  maintenance?: {
+    urgency?: string[];
+    issue_type?: string[];
+    liability_view?: string[];
+    blocker_reason?: string[];
+  };
+  onboarding?: { blocker_reason?: string[] };
+  moveout?: { blocker_reason?: string[] };
+  receivables?: { blocker_reason?: string[]; payment_method?: string[] };
+  vacancy?: { stall_reason?: string[] };
+  service_recovery?: { trigger_type?: string[]; severity?: string[] };
+}
+
 export interface BootstrapResponse {
   queue_summaries: QueueSummary[];
   default_role_inbox_key: string | null;
@@ -11,6 +25,7 @@ export interface BootstrapResponse {
   role_inbox_summaries: RoleInboxSummary[];
   scope_summaries: ScopeSummary[];
   saved_view_summaries: SavedViewSummary[];
+  form_options?: BootstrapFormOptions;
 }
 
 export interface QueueSummary {
