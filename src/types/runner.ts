@@ -10,7 +10,8 @@ export type FieldType =
   | "select"
   | "checkbox"
   | "checklist"
-  | "reference-text";
+  | "reference-text"
+  | "unit-picker";
 
 export interface SelectOption {
   value: string;

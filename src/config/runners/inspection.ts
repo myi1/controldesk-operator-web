@@ -26,10 +26,9 @@ export const INSPECTION_RUNNERS: RunnerConfig[] = [
         fields: [
           {
             key: "property_unit_id",
-            label: "Unit ID",
-            type: "text",
+            label: "Unit",
+            type: "unit-picker",
             required: true,
-            placeholder: "e.g. UNIT-00123",
             hint: "The unit this inspection is for.",
           },
           {

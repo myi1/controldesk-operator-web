@@ -8,6 +8,7 @@ import { Input } from "../primitives/Input";
 import { Select } from "../primitives/Select";
 import { Checkbox } from "../primitives/Checkbox";
 import type { FieldDef, SelectOption, FieldValues } from "../../types/runner";
+import { UnitPickerField } from "./UnitPickerField";
 
 interface FieldRendererProps {
   field: FieldDef;
@@ -206,6 +207,22 @@ export function FieldRenderer({
         {ErrorEl}
         {HintEl}
       </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // unit-picker — searchable combobox populated from units bootstrap
+  // ---------------------------------------------------------------------------
+  if (field.type === "unit-picker") {
+    return (
+      <UnitPickerField
+        label={field.label}
+        required={field.required}
+        value={typeof value === "string" ? value : ""}
+        onChange={(unitId) => onChange(unitId)}
+        error={error}
+        hint={field.hint}
+      />
     );
   }
 

@@ -10,11 +10,15 @@ import { useNavigate } from "react-router-dom";
 import {
   DoorOpen, AlertTriangle, Clock, CheckCircle2, Search,
   ChevronRight, X, Briefcase, ArrowUpRight, RefreshCw, Building2,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "../lib/cn";
 import { useUnitsBootstrap } from "../hooks/use-properties";
 import { formatRelative } from "../lib/date";
 import type { UnitRow, PropertyLinkedRow } from "../types/api";
+import { TransitionRunner } from "../components/runners";
+import { RUNNER_REGISTRY } from "../config/runners";
+import type { RunnerConfig } from "../types/runner";
 
 /* ------------------------------------------------------------------ */
 /*  Attention state badge config                                        */
@@ -289,9 +293,11 @@ function LinkedRowList({
 function UnitDetailPanel({
   row,
   onClose,
+  onScheduleInspection,
 }: {
   row: UnitRow;
   onClose: () => void;
+  onScheduleInspection: (unitId: string) => void;
 }) {
   const navigate = useNavigate();
   const detail = row.detail;
@@ -443,6 +449,35 @@ function UnitDetailPanel({
             No additional detail available for this unit.
           </p>
         )}
+
+        {/* Quick Actions */}
+        <section>
+          <h3 className="mb-2 text-[length:var(--text-caption-size)] font-semibold uppercase tracking-wider text-fg-faint">
+            Quick Actions
+          </h3>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => onScheduleInspection(row.unit_id)}
+              className={cn(
+                "flex w-full items-center gap-2.5 rounded-[var(--radius-md)] border border-border-default",
+                "bg-bg-muted/40 px-3 py-2.5 text-left",
+                "hover:bg-bg-muted hover:border-border-strong transition-colors duration-150",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+                "cursor-pointer",
+              )}
+            >
+              <ClipboardList size={14} className="shrink-0 text-fg-muted" aria-hidden="true" />
+              <div>
+                <p className="text-[length:var(--text-small-size)] font-medium text-fg-default">
+                  Schedule Inspection
+                </p>
+                <p className="text-[length:var(--text-caption-size)] text-fg-muted">
+                  Create a new inspection case for this unit
+                </p>
+              </div>
+            </button>
+          </div>
+        </section>
       </div>
     </aside>
   );
@@ -452,11 +487,15 @@ function UnitDetailPanel({
 /*  Main page                                                           */
 /* ------------------------------------------------------------------ */
 
+const BASE_SCHEDULE_RUNNER = RUNNER_REGISTRY.get("inspection.schedule") as RunnerConfig | undefined;
+
 export default function UnitsPage() {
   const { data, isLoading, isError, error, refetch, isFetching } = useUnitsBootstrap();
   const [activeView, setActiveView] = useState<string>("");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [inspectionRunnerOpen, setInspectionRunnerOpen] = useState(false);
+  const [inspectionRunnerConfig, setInspectionRunnerConfig] = useState<RunnerConfig | null>(null);
 
   const resolvedView = activeView || data?.default_view_key || "units_directory";
 
@@ -494,6 +533,22 @@ export default function UnitsPage() {
     setSelectedId((prev) => (prev === row.unit_id ? null : row.unit_id));
   }, []);
 
+  const handleScheduleInspection = useCallback((unitId: string) => {
+    if (!BASE_SCHEDULE_RUNNER) return;
+    // Build a config copy with property_unit_id pre-filled via defaultValue
+    const prefilled: RunnerConfig = {
+      ...BASE_SCHEDULE_RUNNER,
+      steps: BASE_SCHEDULE_RUNNER.steps.map((step) => ({
+        ...step,
+        fields: step.fields.map((f) =>
+          f.key === "property_unit_id" ? { ...f, defaultValue: unitId } : f,
+        ),
+      })),
+    };
+    setInspectionRunnerConfig(prefilled);
+    setInspectionRunnerOpen(true);
+  }, []);
+
   if (isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
@@ -525,6 +580,7 @@ export default function UnitsPage() {
   if (!data) return null;
 
   return (
+    <>
     <div className="flex h-full flex-col overflow-hidden">
       {/* Page header */}
       <div className="border-b border-border-default bg-bg-surface px-6 py-4">
@@ -669,9 +725,24 @@ export default function UnitsPage() {
           <UnitDetailPanel
             row={selectedRow}
             onClose={() => setSelectedId(null)}
+            onScheduleInspection={handleScheduleInspection}
           />
         )}
       </div>
     </div>
+
+    {/* Schedule Inspection runner — pre-filled from unit detail panel */}
+    {inspectionRunnerConfig && (
+      <TransitionRunner
+        open={inspectionRunnerOpen}
+        onOpenChange={(open) => {
+          setInspectionRunnerOpen(open);
+          if (!open) setInspectionRunnerConfig(null);
+        }}
+        config={inspectionRunnerConfig}
+        recordId=""
+      />
+    )}
+    </>
   );
 }
