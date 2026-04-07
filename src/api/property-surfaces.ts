@@ -14,6 +14,10 @@ import type {
   PropertyContextBootstrapResponse,
   TenantsBootstrapResponse,
   LandlordsBootstrapResponse,
+  TenancyPaymentScheduleSetRequest,
+  TenancyPaymentScheduleResponse,
+  TenancyEjariStatusUpdateRequest,
+  TenancyEjariStatusResponse,
 } from "../types/api";
 
 export async function fetchPropertiesBootstrap(): Promise<PropertiesBootstrapResponse> {
@@ -73,4 +77,26 @@ export async function fetchPropertyContextBootstrap(params?: {
     reference_type: params?.referenceType,
     reference_id: params?.referenceId,
   });
+}
+
+// ---- Tenancy record operations ----
+
+export async function setTenancyPaymentSchedule(
+  tenancyRecordId: string,
+  payload: TenancyPaymentScheduleSetRequest,
+): Promise<TenancyPaymentScheduleResponse> {
+  return apiPost<TenancyPaymentScheduleResponse>(
+    `/api/v1/operator-shell/tenancy-records/${tenancyRecordId}/payment-schedule`,
+    payload,
+  );
+}
+
+export async function updateTenancyEjariStatus(
+  tenancyRecordId: string,
+  payload: TenancyEjariStatusUpdateRequest,
+): Promise<TenancyEjariStatusResponse> {
+  return apiPut<TenancyEjariStatusResponse>(
+    `/api/v1/operator-shell/tenancy-records/${tenancyRecordId}/ejari-status`,
+    payload,
+  );
 }

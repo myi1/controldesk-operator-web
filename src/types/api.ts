@@ -598,3 +598,57 @@ export interface LandlordsBootstrapResponse {
   view_summaries: ViewSummary[]
   default_view_key: string
 }
+
+// ---- Tenancy record detail ----
+
+export interface TenancyRecordRow {
+  tenancy_record_id: string
+  unit_id: string
+  property_reference_id: string
+  status: string
+  contract_start_date?: string | null
+  contract_end_date?: string | null
+  ejari_status?: string | null
+  ejari_contract_number?: string | null
+  ejari_registered_at?: string | null
+  ejari_expires_at?: string | null
+  payment_schedule_count?: number
+}
+
+export interface PaymentScheduleInstalment {
+  instalment_number: number;
+  due_date: string;
+  amount_aed: number;
+  payment_method: string; // cheque | bank_transfer | cash
+  cheque_number?: string | null;
+  cheque_bank?: string | null;
+  receipt_date?: string | null;
+  receipt_reference?: string | null;
+  bounce_flag?: boolean;
+  bounce_date?: string | null;
+  status: string; // pending | received | bounced | overdue | waived
+}
+
+export interface TenancyPaymentScheduleSetRequest {
+  instalments: PaymentScheduleInstalment[];
+}
+
+export interface TenancyPaymentScheduleResponse {
+  tenancy_record_id: string;
+  instalments: PaymentScheduleInstalment[];
+}
+
+export interface TenancyEjariStatusUpdateRequest {
+  ejari_status: string; // registered | pending | expired | cancelled
+  ejari_contract_number?: string | null;
+  ejari_registered_at?: string | null;
+  ejari_expires_at?: string | null;
+}
+
+export interface TenancyEjariStatusResponse {
+  tenancy_record_id: string;
+  ejari_status?: string | null;
+  ejari_contract_number?: string | null;
+  ejari_registered_at?: string | null;
+  ejari_expires_at?: string | null;
+}

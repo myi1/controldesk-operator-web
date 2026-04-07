@@ -172,4 +172,56 @@ export const TENANCY_RUNNERS: RunnerConfig[] = [
     successMessage: "Renewal case opened.",
     allowedRoles: ["PM Coordinator", "PM Manager / Senior PM Coordinator"],
   },
+
+  {
+    id: "tenancy.record_ejari_update",
+    title: "Update Ejari Status",
+    description: "Record the Ejari registration status and related contract details.",
+    lifecycle: "tenancy",
+    endpoint: `${BASE}/{id}/ejari-status`,
+    method: "PUT",
+    mode: "modal",
+    autoFields: false,
+    steps: [
+      {
+        label: "Ejari Registration",
+        description: "Update the Ejari status and registration details for this tenancy.",
+        fields: [
+          {
+            key: "ejari_status",
+            label: "Ejari Status",
+            type: "select",
+            options: [
+              { value: "pending", label: "Pending" },
+              { value: "registered", label: "Registered" },
+              { value: "expired", label: "Expired" },
+              { value: "cancelled", label: "Cancelled" },
+            ],
+            required: true,
+          },
+          {
+            key: "ejari_contract_number",
+            label: "Ejari Contract Number",
+            type: "text",
+            required: false,
+          },
+          {
+            key: "ejari_registered_at",
+            label: "Registration Date",
+            type: "date",
+            required: false,
+          },
+          {
+            key: "ejari_expires_at",
+            label: "Expiry Date",
+            type: "date",
+            required: false,
+          },
+        ],
+      },
+    ],
+    invalidates: INVALIDATES,
+    successMessage: "Ejari status updated.",
+    allowedRoles: ["PM Coordinator", "Admin / Ejari / Documentation", "PM Manager / Senior PM Coordinator"],
+  },
 ];
