@@ -217,3 +217,69 @@ export async function apiPost<T>(path: string, body: unknown = {}): Promise<T> {
 
   throw lastError ?? new ApiError("Request failed after multiple attempts.", 0);
 }
+
+// ---------------------------------------------------------------------------
+// Public API: PUT with JSON body
+// ---------------------------------------------------------------------------
+
+export async function apiPut<T>(path: string, body: unknown = {}): Promise<T> {
+  const url = `${BASE_URL}${path}`;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) await sleep(backoffDelay(attempt - 1));
+
+    let res: Response;
+    try {
+      res = await doFetch(url, {
+        method: "PUT",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    } catch (err) {
+      lastError = err;
+      if (isRetryable(err)) continue;
+      throw err;
+    }
+
+    try {
+      return await handleResponse<T>(res, path);
+    } catch (err) {
+      if (isRetryable(err)) { lastError = err; continue; }
+      throw err;
+    }
+  }
+
+  throw lastError ?? new ApiError("Request failed after multiple attempts.", 0);
+}
+
+// ---------------------------------------------------------------------------
+// Public API: DELETE (no body)
+// ---------------------------------------------------------------------------
+
+export async function apiDelete<T>(path: string): Promise<T> {
+  const url = `${BASE_URL}${path}`;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) await sleep(backoffDelay(attempt - 1));
+
+    let res: Response;
+    try {
+      res = await doFetch(url, { method: "DELETE", headers: authHeaders() });
+    } catch (err) {
+      lastError = err;
+      if (isRetryable(err)) continue;
+      throw err;
+    }
+
+    try {
+      return await handleResponse<T>(res, path);
+    } catch (err) {
+      if (isRetryable(err)) { lastError = err; continue; }
+      throw err;
+    }
+  }
+
+  throw lastError ?? new ApiError("Request failed after multiple attempts.", 0);
+}

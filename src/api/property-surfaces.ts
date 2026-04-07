@@ -2,13 +2,16 @@
 // Property surfaces API — Properties, Portfolio, Units, Property Context
 // ---------------------------------------------------------------------------
 
-import { apiGet, apiPost } from "./client";
+import { apiGet, apiPost, apiPut, apiDelete } from "./client";
 import type {
   PropertiesBootstrapResponse,
   PortfolioBootstrapResponse,
   UnitsBootstrapResponse,
   CreatePropertyPayload,
   CreatePropertyResponse,
+  UnitWritePayload,
+  DeleteUnitResponse,
+  PropertyContextBootstrapResponse,
 } from "../types/api";
 
 export async function fetchPropertiesBootstrap(): Promise<PropertiesBootstrapResponse> {
@@ -29,12 +32,31 @@ export async function createProperty(
   return apiPost<CreatePropertyResponse>("/api/v1/properties", payload);
 }
 
-export async function fetchPropertyContextBootstrap(params: {
+// ---- Unit CRUD ----
+
+export async function createUnit(payload: UnitWritePayload): Promise<UnitWritePayload> {
+  return apiPost<UnitWritePayload>("/api/v1/units", payload);
+}
+
+export async function updateUnit(
+  unitId: string,
+  payload: UnitWritePayload,
+): Promise<UnitWritePayload> {
+  return apiPut<UnitWritePayload>(`/api/v1/units/${unitId}`, payload);
+}
+
+export async function deleteUnit(unitId: string): Promise<DeleteUnitResponse> {
+  return apiDelete<DeleteUnitResponse>(`/api/v1/units/${unitId}`);
+}
+
+// ---- Property Context ----
+
+export async function fetchPropertyContextBootstrap(params?: {
   referenceType?: string;
   referenceId?: string;
-}): Promise<Record<string, unknown>> {
-  return apiGet<Record<string, unknown>>("/api/v1/property-context/bootstrap", {
-    reference_type: params.referenceType,
-    reference_id: params.referenceId,
+}): Promise<PropertyContextBootstrapResponse> {
+  return apiGet<PropertyContextBootstrapResponse>("/api/v1/property-context/bootstrap", {
+    reference_type: params?.referenceType,
+    reference_id: params?.referenceId,
   });
 }

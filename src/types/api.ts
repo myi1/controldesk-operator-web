@@ -442,6 +442,61 @@ export interface CreatePropertyResponse {
   status: string;
 }
 
+// ---- Unit CRUD ----
+
+/** Payload shape for POST /api/v1/units and PUT /api/v1/units/{unit_id} */
+export interface UnitWritePayload {
+  unit_id: string;
+  title: string;
+  property_reference_id: string;
+  property_label: string;
+  landlord_account_id: string;
+  occupancy_state: string;
+  attention_state: string;
+  readiness_posture: string;
+  tenancy_posture: string;
+  stock_type: string;
+  target_date: string;
+  current_owner: string;
+  lifecycle_summary: string;
+  resident_label: string;
+  tenant_label: string;
+  view_keys: string[];
+  primary_leasing_record_id?: string;
+  primary_leasing_view?: string;
+  primary_finance_record_id?: string;
+  primary_finance_section?: string;
+}
+
+export interface DeleteUnitResponse {
+  unit_id: string;
+  record_status: string;
+  archived_at: string;
+  archived_by: string;
+}
+
+// ---- Property Context ----
+
+export interface PropertyContextSummaryCard {
+  key: string;
+  label: string;
+  value: number;
+}
+
+export interface PropertyContextBootstrapResponse {
+  status: string;
+  workspace_label: string;
+  page_route: string;
+  summary_cards: PropertyContextSummaryCard[];
+  nearby_rows: unknown[];
+  related_references: unknown[];
+  upcoming_deadlines: unknown[];
+  selection: unknown | null;
+  user_roles: string[];
+  limitations: string[];
+  preferred_reference_types: string[];
+}
+
 export interface UnitsBootstrapResponse {
   rows: UnitRow[];
   filter_options: {
