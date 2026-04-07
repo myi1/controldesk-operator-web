@@ -8,11 +8,16 @@
 import { useState, useMemo, useCallback } from "react";
 import {
   Wrench, AlertCircle, Clock, CheckCircle2, Search,
-  ChevronRight, X, RefreshCw, AlertTriangle,
+  ChevronRight, X, RefreshCw, AlertTriangle, Plus,
 } from "lucide-react";
 import { cn } from "../lib/cn";
 import { useVendorsBootstrap } from "../hooks/use-properties";
 import type { VendorRow } from "../types/api";
+import { TransitionRunner } from "../components/runners";
+import { RUNNER_REGISTRY } from "../config/runners";
+import type { RunnerConfig } from "../types/runner";
+
+const CREATE_VENDOR_RUNNER = RUNNER_REGISTRY.get("vendor.create") as RunnerConfig | undefined;
 
 /* ------------------------------------------------------------------ */
 /*  Verification status badge config                                    */
@@ -260,9 +265,11 @@ function VendorTableRow({
 function VendorDetailPanel({
   row,
   onClose,
+  onRunAction,
 }: {
   row: VendorRow;
   onClose: () => void;
+  onRunAction: (runnerId: string, recordId: string) => void;
 }) {
   return (
     <aside
@@ -428,6 +435,47 @@ function VendorDetailPanel({
             </div>
           </dl>
         </section>
+
+        <section>
+          <h3 className="mb-2 text-[length:var(--text-caption-size)] font-semibold uppercase tracking-wider text-fg-faint">
+            Quick Actions
+          </h3>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => onRunAction("vendor.update_profile", row.entity_id)}
+              className={cn(
+                "w-full rounded-[var(--radius-md)] border border-border-default bg-bg-muted",
+                "px-3 py-2 text-left text-[length:var(--text-small-size)] text-fg-default",
+                "hover:bg-bg-surface-raised hover:text-fg-strong transition-colors",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+              )}
+            >
+              Edit Profile
+            </button>
+            <button
+              onClick={() => onRunAction("vendor.update_verification", row.entity_id)}
+              className={cn(
+                "w-full rounded-[var(--radius-md)] border border-border-default bg-bg-muted",
+                "px-3 py-2 text-left text-[length:var(--text-small-size)] text-fg-default",
+                "hover:bg-bg-surface-raised hover:text-fg-strong transition-colors",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+              )}
+            >
+              Update Verification
+            </button>
+            <button
+              onClick={() => onRunAction("vendor.update_bank_details", row.entity_id)}
+              className={cn(
+                "w-full rounded-[var(--radius-md)] border border-border-default bg-bg-muted",
+                "px-3 py-2 text-left text-[length:var(--text-small-size)] text-fg-default",
+                "hover:bg-bg-surface-raised hover:text-fg-strong transition-colors",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+              )}
+            >
+              Update Bank Details
+            </button>
+          </div>
+        </section>
       </div>
     </aside>
   );
@@ -442,6 +490,18 @@ export default function VendorsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [activeRunner, setActiveRunner] = useState<RunnerConfig | null>(null);
+  const [activeRunnerId, setActiveRunnerId] = useState<string>("");
+  const [runnerOpen, setRunnerOpen] = useState(false);
+
+  const handleRunAction = useCallback((runnerId: string, recordId: string) => {
+    const cfg = RUNNER_REGISTRY.get(runnerId) as RunnerConfig | undefined;
+    if (!cfg) return;
+    setActiveRunner(cfg);
+    setActiveRunnerId(recordId);
+    setRunnerOpen(true);
+  }, []);
 
   const filteredRows = useMemo(() => {
     if (!data) return [];
@@ -525,18 +585,35 @@ export default function VendorsPage() {
               <RefreshCw size={13} className="animate-spin text-fg-faint" aria-hidden="true" />
             )}
           </div>
-          <button
-            onClick={() => void refetch()}
-            className={cn(
-              "flex items-center gap-1.5 rounded-[var(--radius-md)] border border-border-default",
-              "px-3 py-1.5 text-[length:var(--text-small-size)] text-fg-muted",
-              "hover:bg-bg-muted hover:text-fg-default transition-colors",
-              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+          <div className="flex items-center gap-2">
+            {CREATE_VENDOR_RUNNER && (
+              <button
+                onClick={() => setCreateOpen(true)}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-[var(--radius-md)]",
+                  "bg-action-primary-default px-3 py-1.5 text-[length:var(--text-small-size)] text-white",
+                  "hover:bg-action-primary-hover transition-colors duration-150",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+                  "cursor-pointer",
+                )}
+              >
+                <Plus size={13} aria-hidden="true" />
+                Add Vendor
+              </button>
             )}
-          >
-            <RefreshCw size={13} aria-hidden="true" />
-            Refresh
-          </button>
+            <button
+              onClick={() => void refetch()}
+              className={cn(
+                "flex items-center gap-1.5 rounded-[var(--radius-md)] border border-border-default",
+                "px-3 py-1.5 text-[length:var(--text-small-size)] text-fg-muted",
+                "hover:bg-bg-muted hover:text-fg-default transition-colors",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+              )}
+            >
+              <RefreshCw size={13} aria-hidden="true" />
+              Refresh
+            </button>
+          </div>
         </div>
       </div>
 
@@ -680,9 +757,28 @@ export default function VendorsPage() {
           <VendorDetailPanel
             row={selectedRow}
             onClose={() => setSelectedId(null)}
+            onRunAction={handleRunAction}
           />
         )}
       </div>
+
+      {CREATE_VENDOR_RUNNER && (
+        <TransitionRunner
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          config={CREATE_VENDOR_RUNNER}
+          recordId=""
+        />
+      )}
+
+      {activeRunner && (
+        <TransitionRunner
+          open={runnerOpen}
+          onOpenChange={setRunnerOpen}
+          config={activeRunner}
+          recordId={activeRunnerId}
+        />
+      )}
     </div>
   );
 }

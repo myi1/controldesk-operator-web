@@ -215,6 +215,7 @@ export function useTransitionRunner({
     }
     return init;
   });
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -223,7 +224,7 @@ export function useTransitionRunner({
   const stepDef = config.steps[currentStep];
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === totalSteps - 1;
-  const isDirty = Object.keys(values).length > 0;
+  const isDirty = hasUserInteracted;
 
   const formOptions = bootstrap?.form_options;
 
@@ -241,6 +242,7 @@ export function useTransitionRunner({
   }, [hasRequiredRole, stepDef, values]);
 
   const setFieldValue = useCallback((key: string, value: FieldValues[string]) => {
+    setHasUserInteracted(true);
     setValues((prev) => ({ ...prev, [key]: value }));
     setErrors((prev) => {
       if (!prev[key]) return prev;
@@ -335,7 +337,7 @@ export function useTransitionRunner({
       // Merge: fixedPayload overrides auto-fields; form values override fixedPayload
       Object.assign(payload, config.fixedPayload ?? {}, fieldValues);
 
-      await advanceLifecycle(config.endpoint, recordId, payload);
+      await advanceLifecycle(config.endpoint, recordId, payload, config.method);
 
       // Invalidate TanStack Query caches
       for (const key of config.invalidates) {

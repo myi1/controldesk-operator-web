@@ -47,7 +47,7 @@ export interface RunnerConfig {
   lifecycle: string;
   /** Path template — {id} is replaced with the record docname at call time */
   endpoint: string;
-  method: "POST" | "PUT";
+  method: "POST" | "PUT" | "PATCH";
   mode: "modal" | "full-page";
   fixedPayload?: Record<string, unknown>;
   steps: RunnerStepDef[];

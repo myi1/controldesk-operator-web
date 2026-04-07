@@ -2,7 +2,7 @@
 // Runner engine API layer — lifecycle advance endpoints
 // ---------------------------------------------------------------------------
 
-import { apiPost } from "./client";
+import { apiPost, apiPut, apiPatch } from "./client";
 import type { ActionResponse } from "../types/api";
 
 /**
@@ -17,8 +17,11 @@ export function advanceLifecycle(
   endpointTemplate: string,
   recordId: string,
   payload: Record<string, unknown>,
+  method: "POST" | "PUT" | "PATCH" = "POST",
 ): Promise<ActionResponse> {
   const path = endpointTemplate.replace("{id}", encodeURIComponent(recordId));
+  if (method === "PUT") return apiPut<ActionResponse>(path, payload);
+  if (method === "PATCH") return apiPatch<ActionResponse>(path, payload);
   return apiPost<ActionResponse>(path, payload);
 }
 

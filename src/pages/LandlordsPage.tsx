@@ -8,11 +8,16 @@
 import { useState, useMemo, useCallback } from "react";
 import {
   Briefcase, AlertTriangle, Clock, CheckCircle2, Search,
-  ChevronRight, X, RefreshCw, Building2,
+  ChevronRight, X, RefreshCw, Building2, Plus,
 } from "lucide-react";
 import { cn } from "../lib/cn";
 import { useLandlordsBootstrap } from "../hooks/use-properties";
 import type { LandlordRow } from "../types/api";
+import { TransitionRunner } from "../components/runners";
+import { RUNNER_REGISTRY } from "../config/runners";
+import type { RunnerConfig } from "../types/runner";
+
+const CREATE_LANDLORD_RUNNER = RUNNER_REGISTRY.get("landlord.create") as RunnerConfig | undefined;
 
 /* ------------------------------------------------------------------ */
 /*  Attention state badge config                                        */
@@ -257,9 +262,11 @@ function LandlordTableRow({
 function LandlordDetailPanel({
   row,
   onClose,
+  onRunAction,
 }: {
   row: LandlordRow;
   onClose: () => void;
+  onRunAction: (runnerId: string, recordId: string) => void;
 }) {
   return (
     <aside
@@ -343,6 +350,58 @@ function LandlordDetailPanel({
             </div>
           </dl>
         </section>
+
+        <section>
+          <h3 className="mb-2 text-[length:var(--text-caption-size)] font-semibold uppercase tracking-wider text-fg-faint">
+            Quick Actions
+          </h3>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => onRunAction("landlord.update_kyc", row.landlord_account_id)}
+              className={cn(
+                "w-full rounded-[var(--radius-md)] border border-border-default bg-bg-muted",
+                "px-3 py-2 text-left text-[length:var(--text-small-size)] text-fg-default",
+                "hover:bg-bg-surface-raised hover:text-fg-strong transition-colors",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+              )}
+            >
+              Update KYC
+            </button>
+            <button
+              onClick={() => onRunAction("landlord.update_bank_details", row.landlord_account_id)}
+              className={cn(
+                "w-full rounded-[var(--radius-md)] border border-border-default bg-bg-muted",
+                "px-3 py-2 text-left text-[length:var(--text-small-size)] text-fg-default",
+                "hover:bg-bg-surface-raised hover:text-fg-strong transition-colors",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+              )}
+            >
+              Update Bank Details
+            </button>
+            <button
+              onClick={() => onRunAction("landlord.update_fee_agreement", row.landlord_account_id)}
+              className={cn(
+                "w-full rounded-[var(--radius-md)] border border-border-default bg-bg-muted",
+                "px-3 py-2 text-left text-[length:var(--text-small-size)] text-fg-default",
+                "hover:bg-bg-surface-raised hover:text-fg-strong transition-colors",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+              )}
+            >
+              Update Fee Agreement
+            </button>
+            <button
+              onClick={() => onRunAction("landlord.update_approval_matrix", row.landlord_account_id)}
+              className={cn(
+                "w-full rounded-[var(--radius-md)] border border-border-default bg-bg-muted",
+                "px-3 py-2 text-left text-[length:var(--text-small-size)] text-fg-default",
+                "hover:bg-bg-surface-raised hover:text-fg-strong transition-colors",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+              )}
+            >
+              Update Approval Matrix
+            </button>
+          </div>
+        </section>
       </div>
     </aside>
   );
@@ -358,6 +417,18 @@ export default function LandlordsPage() {
   const [search, setSearch] = useState("");
   const [tierFilter, setTierFilter] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [activeRunner, setActiveRunner] = useState<RunnerConfig | null>(null);
+  const [activeRunnerId, setActiveRunnerId] = useState<string>("");
+  const [runnerOpen, setRunnerOpen] = useState(false);
+
+  const handleRunAction = useCallback((runnerId: string, recordId: string) => {
+    const cfg = RUNNER_REGISTRY.get(runnerId) as RunnerConfig | undefined;
+    if (!cfg) return;
+    setActiveRunner(cfg);
+    setActiveRunnerId(recordId);
+    setRunnerOpen(true);
+  }, []);
 
   const resolvedView = activeView || data?.default_view_key || "landlords_directory";
 
@@ -463,18 +534,35 @@ export default function LandlordsPage() {
               <RefreshCw size={13} className="animate-spin text-fg-faint" aria-hidden="true" />
             )}
           </div>
-          <button
-            onClick={() => void refetch()}
-            className={cn(
-              "flex items-center gap-1.5 rounded-[var(--radius-md)] border border-border-default",
-              "px-3 py-1.5 text-[length:var(--text-small-size)] text-fg-muted",
-              "hover:bg-bg-muted hover:text-fg-default transition-colors",
-              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+          <div className="flex items-center gap-2">
+            {CREATE_LANDLORD_RUNNER && (
+              <button
+                onClick={() => setCreateOpen(true)}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-[var(--radius-md)]",
+                  "bg-action-primary-default px-3 py-1.5 text-[length:var(--text-small-size)] text-white",
+                  "hover:bg-action-primary-hover transition-colors duration-150",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+                  "cursor-pointer",
+                )}
+              >
+                <Plus size={13} aria-hidden="true" />
+                Add Landlord
+              </button>
             )}
-          >
-            <RefreshCw size={13} aria-hidden="true" />
-            Refresh
-          </button>
+            <button
+              onClick={() => void refetch()}
+              className={cn(
+                "flex items-center gap-1.5 rounded-[var(--radius-md)] border border-border-default",
+                "px-3 py-1.5 text-[length:var(--text-small-size)] text-fg-muted",
+                "hover:bg-bg-muted hover:text-fg-default transition-colors",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+              )}
+            >
+              <RefreshCw size={13} aria-hidden="true" />
+              Refresh
+            </button>
+          </div>
         </div>
       </div>
 
@@ -588,9 +676,28 @@ export default function LandlordsPage() {
           <LandlordDetailPanel
             row={selectedRow}
             onClose={() => setSelectedId(null)}
+            onRunAction={handleRunAction}
           />
         )}
       </div>
+
+      {CREATE_LANDLORD_RUNNER && (
+        <TransitionRunner
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          config={CREATE_LANDLORD_RUNNER}
+          recordId=""
+        />
+      )}
+
+      {activeRunner && (
+        <TransitionRunner
+          open={runnerOpen}
+          onOpenChange={setRunnerOpen}
+          config={activeRunner}
+          recordId={activeRunnerId}
+        />
+      )}
     </div>
   );
 }

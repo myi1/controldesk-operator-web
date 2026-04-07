@@ -21,6 +21,8 @@ import { MAINTENANCE_RUNNERS } from "./maintenance";
 import { SERVICE_RECOVERY_RUNNERS } from "./service-recovery";
 import { REPORTING_RUNNERS } from "./reporting";
 import { INSPECTION_RUNNERS } from "./inspection";
+import { VENDOR_RUNNERS, VENDOR_CONFIRM_ACTIONS } from "./vendors";
+import { LANDLORD_RUNNERS, LANDLORD_CONFIRM_ACTIONS } from "./landlords";
 
 const ALL_CONFIGS: AnyRunnerConfig[] = [
   ...ONBOARDING_RUNNERS,
@@ -38,6 +40,10 @@ const ALL_CONFIGS: AnyRunnerConfig[] = [
   ...SERVICE_RECOVERY_RUNNERS,
   ...REPORTING_RUNNERS,
   ...INSPECTION_RUNNERS,
+  ...VENDOR_RUNNERS,
+  ...VENDOR_CONFIRM_ACTIONS,
+  ...LANDLORD_RUNNERS,
+  ...LANDLORD_CONFIRM_ACTIONS,
 ];
 
 export const RUNNER_REGISTRY = new Map<string, AnyRunnerConfig>(
