@@ -618,6 +618,11 @@ export interface TenancyRecordRow {
   rdc_dispute_opened_at?: string | null
   rdc_dispute_resolved_at?: string | null
   rdc_dispute_outcome?: string | null
+  deposit_amount_aed?: number | null
+  deposit_cheque_number?: string
+  deposit_cheque_bank?: string
+  deposit_held_by?: string
+  deposit_received_at?: string
 }
 
 export interface PaymentScheduleInstalment {
@@ -782,4 +787,65 @@ export interface CreateVendorResponse {
   display_name: string;
   vendor_type: string;
   verification_status: string;
+}
+
+// ---- Phase 5: Deposit & Dilapidation ----
+
+export interface DepositDeductionItem {
+  category: string;
+  description: string;
+  amount_aed: number;
+  evidence_reference?: string;
+  vendor_job_id?: string;
+}
+
+export interface DilapidationItem {
+  room_area: string;
+  condition: string;
+  description: string;
+  make_good_required?: boolean;
+  make_good_cost_estimate_aed?: number | null;
+  vendor_job_id?: string;
+  resolved_at?: string;
+}
+
+export interface TenancyDepositSetRequest {
+  deposit_amount_aed: number;
+  deposit_cheque_number?: string;
+  deposit_cheque_bank?: string;
+  deposit_held_by?: string;
+  deposit_received_at?: string;
+}
+
+export interface TenancyDepositResponse {
+  tenancy_record_id: string;
+  deposit_amount_aed?: number | null;
+  deposit_cheque_number: string;
+  deposit_cheque_bank: string;
+  deposit_held_by: string;
+  deposit_received_at: string;
+}
+
+export interface MoveOutDepositDeductionsSetRequest {
+  deductions: DepositDeductionItem[];
+  deposit_reconciliation_status?: string;
+  deposit_disbursement_reference?: string;
+}
+
+export interface MoveOutDepositDeductionsResponse {
+  moveout_case_id: string;
+  deductions: DepositDeductionItem[];
+  total_deductions_aed: number;
+  deposit_return_amount_aed?: number | null;
+  deposit_reconciliation_status: string;
+}
+
+export interface MoveOutDilapidationSetRequest {
+  items: DilapidationItem[];
+}
+
+export interface MoveOutDilapidationResponse {
+  moveout_case_id: string;
+  items: DilapidationItem[];
+  total_make_good_estimate_aed: number;
 }

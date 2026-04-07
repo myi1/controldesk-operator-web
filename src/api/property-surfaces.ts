@@ -20,6 +20,12 @@ import type {
   TenancyEjariStatusResponse,
   TenancyRdcDisputeUpdateRequest,
   TenancyRdcDisputeResponse,
+  TenancyDepositSetRequest,
+  TenancyDepositResponse,
+  MoveOutDepositDeductionsSetRequest,
+  MoveOutDepositDeductionsResponse,
+  MoveOutDilapidationSetRequest,
+  MoveOutDilapidationResponse,
   RenewalDldIndexUpdateRequest,
   RenewalDldIndexResponse,
   RenewalArticleNoticeRequest,
@@ -151,6 +157,36 @@ export async function recordRenewalArticleNotice(
 ): Promise<RenewalArticleNoticeResponse> {
   return apiPut<RenewalArticleNoticeResponse>(
     `/api/v1/operator-shell/renewal-cases/${renewalCaseId}/article-notice`,
+    payload,
+  );
+}
+
+export async function setTenancyDeposit(
+  tenancyRecordId: string,
+  payload: TenancyDepositSetRequest,
+): Promise<TenancyDepositResponse> {
+  return apiPut<TenancyDepositResponse>(
+    `/api/v1/operator-shell/tenancy-records/${tenancyRecordId}/deposit`,
+    payload,
+  );
+}
+
+export async function setMoveOutDepositDeductions(
+  moveoutCaseId: string,
+  payload: MoveOutDepositDeductionsSetRequest,
+): Promise<MoveOutDepositDeductionsResponse> {
+  return apiPost<MoveOutDepositDeductionsResponse>(
+    `/api/v1/operator-shell/moveout-cases/${moveoutCaseId}/deposit-deductions`,
+    payload,
+  );
+}
+
+export async function setMoveOutDilapidation(
+  moveoutCaseId: string,
+  payload: MoveOutDilapidationSetRequest,
+): Promise<MoveOutDilapidationResponse> {
+  return apiPost<MoveOutDilapidationResponse>(
+    `/api/v1/operator-shell/moveout-cases/${moveoutCaseId}/dilapidation`,
     payload,
   );
 }
