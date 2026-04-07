@@ -29,12 +29,12 @@ export interface BootstrapResponse {
 }
 
 export interface QueueSummary {
-  queue_key: string;
+  key: string;
   label: string;
   count: number;
-  overdue_count: number;
-  blocked_count: number;
-  escalated_count: number;
+  overdue_count?: number;
+  blocked_count?: number;
+  escalated_count?: number;
 }
 
 export interface RoleInboxSummary {
@@ -69,12 +69,21 @@ export interface QueueRowsParams {
   as_of_date?: string;
 }
 
+export interface QueueRowsSummary {
+  count: number;
+  overdue_count?: number;
+}
+
 export interface QueueRowsResponse {
   rows: QueueRow[];
   queue_context: QueueContext;
-  summary: QueueSummary;
-  scope_key?: string;
+  summary: QueueRowsSummary;
+  scope_key?: string | null;
   view_kind?: string;
+  total_count?: number;
+  has_more?: boolean;
+  offset?: number;
+  limit?: number;
 }
 
 export interface QueueRow {
@@ -85,7 +94,7 @@ export interface QueueRow {
   current_owner: string | null;
   target_date: string | null;
   is_overdue: boolean;
-  overdue: boolean;
+  overdue?: boolean;
   escalation_state: string;
   blocker_summary: string | null;
   next_action: string | null;
@@ -100,7 +109,7 @@ export interface QueueRow {
 }
 
 export interface QueueContext {
-  queue_key: string;
+  key: string;
   label: string;
   description?: string;
   status_options?: string[];

@@ -4,6 +4,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { getToken } from "../lib/auth";
+import type { LoginUser } from "../lib/auth";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -31,7 +32,7 @@ export class AuthServiceUnavailableError extends Error {
 // Query function
 // ---------------------------------------------------------------------------
 
-async function checkAuth(): Promise<string> {
+async function checkAuth(): Promise<LoginUser> {
   const token = getToken();
   if (!token) throw new Error("Not authenticated");
 
@@ -59,12 +60,12 @@ async function checkAuth(): Promise<string> {
     throw new Error("Not authenticated");
   }
 
-  const data = (await res.json()) as { username: string };
+  const data = (await res.json()) as LoginUser;
   if (!data.username) {
     throw new Error("Not authenticated");
   }
 
-  return data.username;
+  return data;
 }
 
 // ---------------------------------------------------------------------------
@@ -72,7 +73,7 @@ async function checkAuth(): Promise<string> {
 // ---------------------------------------------------------------------------
 
 export function useAuthCheck() {
-  return useQuery<string, Error>({
+  return useQuery<LoginUser, Error>({
     queryKey: ["auth-check"],
     queryFn: checkAuth,
     staleTime: 60_000,

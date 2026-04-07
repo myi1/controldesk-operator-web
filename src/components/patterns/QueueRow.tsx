@@ -150,7 +150,7 @@ export const QueueRow = memo(function QueueRow({
       <td className="hidden md:table-cell w-[100px] px-2">
         <DueIndicator
           targetDate={row.target_date}
-          isOverdue={row.is_overdue || row.overdue}
+          isOverdue={row.is_overdue || row.overdue === true}
         />
       </td>
 

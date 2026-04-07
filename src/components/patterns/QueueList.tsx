@@ -38,6 +38,8 @@ export interface QueueListProps {
   onFiltersChange: (filters: QueueFilters) => void;
   onRowClick: (row: QueueRowType) => void;
   onRowDoubleClick: (row: QueueRowType) => void;
+  /** When set, overrides filters.owner for the API call (used by My Work to pin current user's role). */
+  ownerOverride?: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -144,10 +146,14 @@ export function QueueList({
   filters,
   onRowClick,
   onRowDoubleClick,
+  ownerOverride,
 }: QueueListProps) {
+  const effectiveFilters = ownerOverride
+    ? { ...filters, owner: ownerOverride }
+    : filters;
   const { data, isLoading, isError, error, refetch } = useQueueRows(
     queueKey,
-    filters,
+    effectiveFilters,
     scopeName,
   );
 

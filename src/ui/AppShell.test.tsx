@@ -10,7 +10,7 @@ import { AppShell } from "./AppShell";
 
 vi.mock("../hooks/use-auth-check", () => ({
   useAuthCheck: () => ({
-    data: "testuser@controldesk.local",
+    data: { username: "testuser@controldesk.local", roles: ["Operator"], default_actor_role: "Operator" },
     isLoading: false,
     isError: false,
     error: null,

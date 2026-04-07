@@ -268,7 +268,7 @@ export default function SettingsPage() {
                   Email
                 </p>
                 <p className="text-[length:var(--text-small-size)] text-fg-muted">
-                  {currentUser ?? "—"}
+                  {currentUser?.username ?? "—"}
                 </p>
               </div>
             </div>

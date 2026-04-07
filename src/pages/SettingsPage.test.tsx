@@ -26,7 +26,7 @@ vi.mock("../hooks/use-role-gate", () => ({
 }));
 
 vi.mock("../hooks/use-auth-check", () => ({
-  useAuthCheck: () => ({ data: "operator@controldesk.local" }),
+  useAuthCheck: () => ({ data: { username: "operator@controldesk.local", roles: ["Operator"], default_actor_role: "Operator" } }),
   AuthServiceUnavailableError: class AuthServiceUnavailableError extends Error {},
 }));
 

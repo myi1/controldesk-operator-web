@@ -193,9 +193,9 @@ export const Sidebar = memo(function Sidebar() {
     const map = new Map<string, { count: number; overdueCount: number }>();
     if (data?.queue_summaries) {
       for (const qs of data.queue_summaries) {
-        map.set(qs.queue_key, {
+        map.set(qs.key, {
           count: qs.count,
-          overdueCount: qs.overdue_count,
+          overdueCount: qs.overdue_count ?? 0,
         });
       }
     }

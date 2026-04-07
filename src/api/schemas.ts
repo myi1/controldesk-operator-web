@@ -31,12 +31,17 @@ const LinkedReference = z.object({
 // ---------------------------------------------------------------------------
 
 const QueueSummarySchema = z.object({
-  queue_key: z.string(),
+  key: z.string(),
   label: z.string(),
   count: z.number(),
-  overdue_count: z.number(),
-  blocked_count: z.number(),
-  escalated_count: z.number(),
+  overdue_count: z.number().optional(),
+  blocked_count: z.number().optional(),
+  escalated_count: z.number().optional(),
+});
+
+const QueueRowsSummarySchema = z.object({
+  count: z.number(),
+  overdue_count: z.number().optional(),
 });
 
 const BootstrapFormOptionsSchema = z.object({
@@ -81,7 +86,7 @@ const QueueRowSchema = z.object({
   current_owner: z.string().nullable(),
   target_date: z.string().nullable(),
   is_overdue: z.boolean(),
-  overdue: z.boolean(),
+  overdue: z.boolean().optional(),
   escalation_state: z.string(),
   blocker_summary: z.string().nullable(),
   next_action: z.string().nullable(),
@@ -98,13 +103,13 @@ const QueueRowSchema = z.object({
 export const QueueRowsResponseSchema = z.object({
   rows: z.array(QueueRowSchema),
   queue_context: z.object({
-    queue_key: z.string(),
+    key: z.string(),
     label: z.string(),
     description: z.string().optional(),
     status_options: z.array(z.string()).optional(),
   }),
-  summary: QueueSummarySchema,
-  scope_key: z.string().optional(),
+  summary: QueueRowsSummarySchema,
+  scope_key: z.string().nullish(),
   view_kind: z.string().optional(),
 });
 
@@ -129,11 +134,12 @@ const ProtectedActionSchema = z.object({
 
 const AvailableActionSchema = z.object({
   action_key: z.string(),
-  target_status: z.string(),
+  target_status: z.string().optional(),
   label: z.string(),
   confirmation_required: z.boolean(),
 });
 
+// Kept for consumers that already hold a normalised CaseDetailResponse.
 export const CaseDetailResponseSchema = z.object({
   detail: z.object({
     doctype: z.string(),
@@ -152,6 +158,53 @@ export const CaseDetailResponseSchema = z.object({
   available_actions: z.array(AvailableActionSchema).optional(),
   blocker_banner: z.object({ reason: z.string(), message: z.string() }).optional(),
   limitations: z.array(z.string()),
+});
+
+// Raw shape as returned by the backend — nested under detail.record / detail.*
+const RawFieldSnapshotSchema = z.object({
+  fieldname: z.string(),
+  label: z.string(),
+  value: z.union([z.string(), z.number(), z.boolean(), z.null()]),
+});
+
+const RawContextSectionSchema = z.object({
+  key: z.string(),
+  title: z.string(),
+  items: z.array(RawFieldSnapshotSchema),
+});
+
+const RawAvailableActionSchema = z.object({
+  action_key: z.string(),
+  label: z.string(),
+  confirmation_required: z.boolean(),
+  target_status: z.string().optional(),
+});
+
+export const RawCaseDetailResponseSchema = z.object({
+  detail: z.object({
+    record: z.object({
+      doctype: z.string(),
+      docname: z.string(),
+      title: z.string(),
+      status: z.string(),
+      current_owner: z.string().nullable(),
+      escalation_state: z.string(),
+      target_date: z.string().nullable(),
+      is_overdue: z.boolean(),
+      queue_key: z.string(),
+    }),
+    available_actions: z.array(RawAvailableActionSchema).nullable().optional(),
+    blocker_banner: z.object({
+      tone: z.string().optional(),
+      title: z.string().optional(),
+      message: z.string(),
+    }).nullable().optional(),
+    context_sections: z.array(RawContextSectionSchema).optional(),
+    field_snapshot: z.array(RawFieldSnapshotSchema).optional(),
+    limitations: z.array(z.string()).optional(),
+  }),
+  queue_key: z.string().optional(),
+  status: z.string().optional(),
 });
 
 // ---------------------------------------------------------------------------

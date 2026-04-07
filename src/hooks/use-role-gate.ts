@@ -25,7 +25,7 @@ export function useRoleGate() {
     function canAccessQueue(queueKey: string): boolean {
       // If bootstrap data isn't loaded yet, deny access
       if (!bootstrap) return false;
-      return bootstrap.queue_summaries.some((q) => q.queue_key === queueKey);
+      return bootstrap.queue_summaries.some((q) => q.key === queueKey);
     }
 
     return { userRoles, hasRole, canAccessQueue };
