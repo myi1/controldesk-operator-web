@@ -24,6 +24,10 @@ import type {
   RenewalDldIndexResponse,
   RenewalArticleNoticeRequest,
   RenewalArticleNoticeResponse,
+  VendorsBootstrapResponse,
+  VendorDetailResponse,
+  CreateVendorPayload,
+  CreateVendorResponse,
 } from "../types/api";
 
 export async function fetchPropertiesBootstrap(): Promise<PropertiesBootstrapResponse> {
@@ -71,6 +75,20 @@ export async function fetchTenantsBootstrap(): Promise<TenantsBootstrapResponse>
 
 export async function fetchLandlordsBootstrap(): Promise<LandlordsBootstrapResponse> {
   return apiGet<LandlordsBootstrapResponse>("/api/v1/landlords/bootstrap");
+}
+
+// ---- Vendors ----
+
+export async function fetchVendorsBootstrap(): Promise<VendorsBootstrapResponse> {
+  return apiGet<VendorsBootstrapResponse>("/api/v1/vendors/bootstrap");
+}
+
+export async function fetchVendorDetail(vendorId: string): Promise<VendorDetailResponse> {
+  return apiGet<VendorDetailResponse>(`/api/v1/vendors/${vendorId}`);
+}
+
+export async function createVendor(payload: CreateVendorPayload): Promise<CreateVendorResponse> {
+  return apiPost<CreateVendorResponse>("/api/v1/vendors", payload);
 }
 
 // ---- Property Context ----

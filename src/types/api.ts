@@ -706,3 +706,80 @@ export interface RenewalArticleNoticeResponse {
   article_notice_service_method?: string | null;
   article_notice_reference?: string | null;
 }
+
+// ---- Vendors ----
+
+export interface VendorRow {
+  entity_id: string;
+  display_name: string;
+  vendor_type: string;
+  primary_contact_name: string;
+  primary_contact_phone: string;
+  primary_contact_email: string;
+  service_categories: string[];
+  service_areas: string[];
+  approval_limit_aed?: number | null;
+  verification_status: string;
+  trade_license_expiry: string;
+  insurance_expiry: string;
+  bank_iban: string;
+  verified_at: string;
+  trade_license_number: string;
+  bank_details_complete: boolean;
+  compliance_complete: boolean;
+}
+
+export interface VendorsBootstrapResponse {
+  vendor_rows: VendorRow[];
+  total_count: number;
+  verified_count: number;
+  pending_count: number;
+  suspended_count: number;
+}
+
+export interface VendorDetailResponse {
+  entity_id: string;
+  display_name: string;
+  trade_name: string;
+  vendor_type: string;
+  primary_contact_name: string;
+  primary_contact_phone: string;
+  primary_contact_email: string;
+  service_categories: string[];
+  service_areas: string[];
+  approval_limit_aed?: number | null;
+  preferred_contact_channel: string;
+  bank_name: string;
+  bank_iban: string;
+  bank_beneficiary_name: string;
+  bank_details_verified_at: string;
+  bank_details_verified_by: string;
+  trade_license_number: string;
+  trade_license_expiry: string;
+  insurance_reference: string;
+  insurance_expiry: string;
+  verification_status: string;
+  verified_at: string;
+  verified_by: string;
+  suspension_reason: string;
+  notes: string;
+  bank_details_complete: boolean;
+  compliance_complete: boolean;
+}
+
+export interface CreateVendorPayload {
+  display_name: string;
+  vendor_type: string;
+  primary_contact_name: string;
+  primary_contact_phone: string;
+  primary_contact_email?: string;
+  service_categories?: string[];
+  service_areas?: string[];
+}
+
+export interface CreateVendorResponse {
+  entity_id: string;
+  display_name: string;
+  vendor_type: string;
+  verification_status: string;
+}

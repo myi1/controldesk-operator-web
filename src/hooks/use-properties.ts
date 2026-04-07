@@ -10,6 +10,7 @@ import {
   fetchPropertyContextBootstrap,
   fetchTenantsBootstrap,
   fetchLandlordsBootstrap,
+  fetchVendorsBootstrap,
 } from "../api/property-surfaces";
 import type {
   PropertiesBootstrapResponse,
@@ -18,6 +19,7 @@ import type {
   PropertyContextBootstrapResponse,
   TenantsBootstrapResponse,
   LandlordsBootstrapResponse,
+  VendorsBootstrapResponse,
 } from "../types/api";
 
 export function usePropertiesBootstrap() {
@@ -60,6 +62,15 @@ export function useLandlordsBootstrap() {
   return useQuery<LandlordsBootstrapResponse, Error>({
     queryKey: ["landlords-bootstrap"],
     queryFn: fetchLandlordsBootstrap,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useVendorsBootstrap() {
+  return useQuery<VendorsBootstrapResponse, Error>({
+    queryKey: ["vendors-bootstrap"],
+    queryFn: fetchVendorsBootstrap,
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
