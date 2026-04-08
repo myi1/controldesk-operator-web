@@ -406,9 +406,13 @@ function OverviewTab({
 function DocumentsTab({
   contextSections,
   fieldSnapshot,
+  lifecycle,
+  onDocAction,
 }: {
   contextSections: ContextSection[];
   fieldSnapshot: FieldSnapshot[];
+  lifecycle: string | undefined;
+  onDocAction: (actionKey: string) => void;
 }) {
   // Extract document pack and signature packet data from context sections
   const docSections = contextSections.filter(
@@ -436,16 +440,42 @@ function DocumentsTab({
 
   if (!hasContent) {
     return (
-      <EmptyState
-        icon={FileText}
-        title="No documents"
-        description="Document packs and signature packets will appear here when attached."
-      />
+      <div className="space-y-4">
+        {lifecycle === "onboarding" && (
+          <div className="flex justify-start">
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={FileText}
+              onClick={() => onDocAction("onboarding.start_document_collection")}
+            >
+              Start Document Collection
+            </Button>
+          </div>
+        )}
+        <EmptyState
+          icon={FileText}
+          title="No documents"
+          description="Document packs and signature packets will appear here when attached."
+        />
+      </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {lifecycle === "onboarding" && (
+        <div className="flex justify-start">
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={FileText}
+            onClick={() => onDocAction("onboarding.start_document_collection")}
+          >
+            Start Document Collection
+          </Button>
+        </div>
+      )}
       {docSections.map((section) => {
         const total = section.fields.length;
         const received = section.fields.filter(
@@ -1216,6 +1246,8 @@ export default function CaseDetailPage() {
             <DocumentsTab
               contextSections={contextSections}
               fieldSnapshot={fieldSnapshot}
+              lifecycle={caseType}
+              onDocAction={handleAction}
             />
           )}
 
