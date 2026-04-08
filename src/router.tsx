@@ -91,7 +91,7 @@ export const router = createHashRouter([
 
       // PMS surfaces
       {
-        path: "properties",
+        path: "buildings",
         element: <PropertiesPage />,
       },
       {

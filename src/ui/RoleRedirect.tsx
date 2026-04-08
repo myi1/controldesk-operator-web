@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useBootstrap } from "../hooks/use-bootstrap";
 import { ROLE_DEFAULT_ROUTES } from "../config/role-config";
+import { Spinner } from "../components/primitives/Spinner";
 import type { OperatorRole } from "../types/enums";
 
 /**
@@ -10,9 +11,12 @@ import type { OperatorRole } from "../types/enums";
 export function RoleRedirect() {
   const { data: bootstrap, isLoading } = useBootstrap();
 
-  // While loading, don't render anything (AppShell already shows a spinner)
   if (isLoading || !bootstrap) {
-    return null;
+    return (
+      <div className="flex h-full items-center justify-center text-fg-muted">
+        <Spinner size="md" />
+      </div>
+    );
   }
 
   // Find the first matching role route from the user's role inboxes

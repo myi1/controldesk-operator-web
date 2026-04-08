@@ -102,7 +102,7 @@ function ViewTabs({
   onChange: (key: string) => void;
 }) {
   return (
-    <div className="flex gap-1 overflow-x-auto" role="tablist" aria-label="Property views">
+    <div className="flex gap-1 overflow-x-auto" role="tablist" aria-label="Building views">
       {summaries.map((s) => (
         <button
           key={s.key}
@@ -300,7 +300,7 @@ function PropertyDetailPanel({
         "flex h-full w-full flex-col overflow-hidden",
         "border-l border-border-default bg-bg-surface",
       )}
-      aria-label={`Property detail: ${row.property_label}`}
+      aria-label={`Building detail: ${row.property_label}`}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3 border-b border-border-default px-5 py-4">
@@ -578,7 +578,7 @@ export default function PropertiesPage() {
           <div className="flex items-center gap-2">
             <Building2 size={18} className="text-fg-muted" aria-hidden="true" />
             <h1 className="text-[length:var(--text-heading-lg-size)] font-semibold text-fg-default">
-              Properties
+              Buildings
             </h1>
             {isFetching && !isLoading && (
               <RefreshCw size={13} className="animate-spin text-fg-faint" aria-hidden="true" />
@@ -595,7 +595,7 @@ export default function PropertiesPage() {
               )}
             >
               <Plus size={13} aria-hidden="true" />
-              Add Property
+              Add Building
             </button>
             <button
               onClick={() => void refetch()}
@@ -670,7 +670,7 @@ export default function PropertiesPage() {
               <div className="flex h-48 flex-col items-center justify-center gap-2">
                 <Building2 size={32} className="text-fg-faint" aria-hidden="true" />
                 <p className="text-[length:var(--text-small-size)] text-fg-muted">
-                  {search ? "No properties match your search" : "No properties in this view"}
+                  {search ? "No buildings match your search" : "No buildings in this view"}
                 </p>
                 {search && (
                   <button
@@ -682,7 +682,7 @@ export default function PropertiesPage() {
                 )}
               </div>
             ) : (
-              <table className="w-full border-collapse" aria-label="Properties list">
+              <table className="w-full border-collapse" aria-label="Buildings list">
                 <thead className="sticky top-0 z-10 bg-bg-surface shadow-sm">
                   <tr>
                     <th className="px-4 py-2.5 text-left text-[length:var(--text-caption-size)] font-semibold uppercase tracking-wider text-fg-faint">
