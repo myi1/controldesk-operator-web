@@ -49,6 +49,8 @@ export default function QueueWorkbenchPage() {
   // On My Work, pin current_owner to the user's default role so only their cases appear.
   const ownerOverride = scopeName === "my_work" ? (currentUser?.default_actor_role ?? undefined) : undefined;
 
+  const [dynamicStatusOptions, setDynamicStatusOptions] = useState<string[]>([]);
+
   // Filters (URL-synced — survives page refresh)
   const [filters, setFilters] = useUrlFilters();
 
@@ -63,9 +65,10 @@ export default function QueueWorkbenchPage() {
 
   // Status options for filter bar
   const statusOptions = useMemo(() => {
+    if (dynamicStatusOptions.length > 0) return dynamicStatusOptions;
     const map = STATUS_CONFIG[queueKey];
     return map ? Object.keys(map) : [];
-  }, [queueKey]);
+  }, [queueKey, dynamicStatusOptions]);
 
   // Row click → open preview
   const handleRowClick = useCallback(
@@ -138,6 +141,7 @@ export default function QueueWorkbenchPage() {
             onRowClick={handleRowClick}
             onRowDoubleClick={handleRowDoubleClick}
             ownerOverride={ownerOverride}
+            onStatusOptionsReady={setDynamicStatusOptions}
           />
         </div>
       </div>
