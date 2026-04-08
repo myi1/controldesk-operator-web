@@ -898,3 +898,34 @@ export interface CreateInspectionCaseResponse {
   status: string;
   current_owner_role: string;
 }
+
+export interface DilapidationItemRow {
+  item_id: string;
+  room_area: string;
+  condition: string;
+  description: string;
+  make_good_required: boolean;
+  cost_estimate?: number | null;
+}
+
+export interface InspectionDetailResponse {
+  entity_id: string;
+  property_unit_id: string;
+  unit_label?: string | null;
+  tenancy_record_id?: string | null;
+  landlord_account_id?: string | null;
+  inspection_type: string;
+  frequency: string;
+  scheduled_date?: string | null;
+  actual_date?: string | null;
+  status: string;
+  overall_condition?: string | null;
+  make_good_required: boolean;
+  make_good_notes?: string | null;
+  inspector_name?: string | null;
+  current_owner_role: string;
+  evidence_reference?: string | null;
+  report_reference?: string | null;
+  next_inspection_due?: string | null;
+  dilapidation_items: DilapidationItemRow[];
+}

@@ -12,6 +12,7 @@ import {
   fetchLandlordsBootstrap,
   fetchVendorsBootstrap,
   fetchInspectionsBootstrap,
+  fetchInspectionDetail,
 } from "../api/property-surfaces";
 import type {
   PropertiesBootstrapResponse,
@@ -22,6 +23,7 @@ import type {
   LandlordsBootstrapResponse,
   VendorsBootstrapResponse,
   InspectionsBootstrapResponse,
+  InspectionDetailResponse,
 } from "../types/api";
 
 export function usePropertiesBootstrap() {
@@ -84,6 +86,15 @@ export function useInspectionsBootstrap() {
     queryFn: fetchInspectionsBootstrap,
     staleTime: 30_000,
     refetchInterval: 60_000,
+  });
+}
+
+export function useInspectionDetail(entityId: string | null) {
+  return useQuery<InspectionDetailResponse, Error>({
+    queryKey: ["inspection-detail", entityId],
+    queryFn: () => fetchInspectionDetail(entityId!),
+    enabled: !!entityId,
+    staleTime: 30_000,
   });
 }
 

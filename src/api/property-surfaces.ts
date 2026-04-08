@@ -37,6 +37,7 @@ import type {
   InspectionsBootstrapResponse,
   CreateInspectionCaseRequest,
   CreateInspectionCaseResponse,
+  InspectionDetailResponse,
 } from "../types/api";
 
 export async function fetchPropertiesBootstrap(): Promise<PropertiesBootstrapResponse> {
@@ -229,4 +230,8 @@ export async function createInspectionCase(
   payload: CreateInspectionCaseRequest,
 ): Promise<CreateInspectionCaseResponse> {
   return apiPost<CreateInspectionCaseResponse>("/api/v1/operator-shell/inspections", payload);
+}
+
+export async function fetchInspectionDetail(entityId: string): Promise<InspectionDetailResponse> {
+  return apiGet<InspectionDetailResponse>(`/api/v1/operator-shell/inspections/${entityId}`);
 }

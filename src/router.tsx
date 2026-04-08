@@ -23,6 +23,7 @@ const TenantsPage = lazy(() => import("./pages/TenantsPage"));
 const LandlordsPage = lazy(() => import("./pages/LandlordsPage"));
 const VendorsPage = lazy(() => import("./pages/VendorsPage"));
 const InspectionsPage = lazy(() => import("./pages/InspectionsPage"));
+const InspectionDetailPage = lazy(() => import("./pages/InspectionDetailPage"));
 
 /* ------------------------------------------------------------------ */
 /*  Login page fallback (outside AppShell, needs its own Suspense)     */
@@ -117,6 +118,14 @@ export const router = createHashRouter([
       {
         path: "inspections",
         element: <InspectionsPage />,
+      },
+      {
+        path: "inspections/:id",
+        element: (
+          <Suspense fallback={<div className="flex min-h-dvh items-center justify-center bg-bg-app"><Spinner size="lg" /></div>}>
+            <InspectionDetailPage />
+          </Suspense>
+        ),
       },
 
       // Settings

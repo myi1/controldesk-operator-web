@@ -13,6 +13,7 @@ interface TransitionRunnerProps {
   onOpenChange: (open: boolean) => void;
   config: RunnerConfig;
   recordId: string;
+  onSuccess?: () => void;
 }
 
 export function TransitionRunner({
@@ -20,6 +21,7 @@ export function TransitionRunner({
   onOpenChange,
   config,
   recordId,
+  onSuccess,
 }: TransitionRunnerProps) {
   const { toast } = useToast();
 
@@ -44,6 +46,7 @@ export function TransitionRunner({
     recordId,
     onSuccess: (message) => {
       toast({ title: "Success", description: message, variant: "success" });
+      onSuccess?.();
     },
     onClose: () => onOpenChange(false),
   });
