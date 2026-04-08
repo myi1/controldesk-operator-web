@@ -826,3 +826,45 @@ export interface ProcessRemindersResponse {
   reminder_events_created: number;
   actions_taken: string[];
 }
+
+// ---- Phase 9: Lead Qualification + Commercial Intake Enrichment ----
+
+export type CommercialIntakeDisposition =
+  | "new"
+  | "qualified"
+  | "not_qualified"
+  | "compliance_blocked"
+  | "nurture";
+
+export type CommercialIntakeAttentionState = "overdue" | "normal";
+
+export interface CommercialIntakeCaseListItem {
+  case_id: string;
+  landlord_name: string;
+  primary_contact_email: string;
+  requested_service_tier: string;
+  status: string;
+  disposition: CommercialIntakeDisposition;
+  qualification_score: number | null;
+  compliance_path: string | null;
+  next_step_date: string | null;
+  attention_state: CommercialIntakeAttentionState;
+  lead_source: string | null;
+  landlord_type: string | null;
+  community: string | null;
+  urgency: string | null;
+}
+
+export interface CommercialIntakeCaseListResponse {
+  status: string;
+  cases: CommercialIntakeCaseListItem[];
+  total_count: number;
+}
+
+export interface CommercialIntakeCaseAdvanceResponse {
+  status: string;
+  case_id: string;
+  case_status: string;
+  disposition: CommercialIntakeDisposition;
+  audit_event: Record<string, unknown>;
+}

@@ -20,6 +20,7 @@ import { RECEIVABLES_RUNNERS } from "./receivables";
 import { MAINTENANCE_RUNNERS } from "./maintenance";
 import { SERVICE_RECOVERY_RUNNERS } from "./service-recovery";
 import { REPORTING_RUNNERS } from "./reporting";
+import { COMMERCIAL_INTAKE_RUNNERS, COMMERCIAL_INTAKE_CONFIRM_ACTIONS } from "./commercial_intake";
 
 const ALL_CONFIGS: AnyRunnerConfig[] = [
   ...ONBOARDING_RUNNERS,
@@ -37,6 +38,8 @@ const ALL_CONFIGS: AnyRunnerConfig[] = [
   ...MAINTENANCE_RUNNERS,
   ...SERVICE_RECOVERY_RUNNERS,
   ...REPORTING_RUNNERS,
+  ...COMMERCIAL_INTAKE_RUNNERS,
+  ...COMMERCIAL_INTAKE_CONFIRM_ACTIONS,
 ];
 
 export const RUNNER_REGISTRY = new Map<string, AnyRunnerConfig>(

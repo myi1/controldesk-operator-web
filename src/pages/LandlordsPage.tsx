@@ -3,16 +3,21 @@
 //
 // Landlord account directory: service tier, unit count, active tenancies,
 // attention state, and a slide-in detail panel.
+// Phase 9: CRM Pipeline tab for commercial intake lead qualification.
 // ---------------------------------------------------------------------------
 
 import { useState, useMemo, useCallback } from "react";
 import {
   Briefcase, AlertTriangle, Clock, CheckCircle2, Search,
-  ChevronRight, X, RefreshCw, Building2,
+  ChevronRight, X, RefreshCw, Building2, TrendingUp, CalendarClock,
+  ShieldX, Star, CircleDot,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "../lib/cn";
 import { useLandlordsBootstrap } from "../hooks/use-properties";
-import type { LandlordRow } from "../types/api";
+import { fetchCommercialIntakeCases } from "../api/commercial-intake";
+import { Skeleton } from "../components/primitives/Skeleton";
+import type { LandlordRow, CommercialIntakeCaseListItem, CommercialIntakeDisposition } from "../types/api";
 
 /* ------------------------------------------------------------------ */
 /*  Attention state badge config                                        */
@@ -349,11 +354,348 @@ function LandlordDetailPanel({
 }
 
 /* ------------------------------------------------------------------ */
+/*  CRM Pipeline — disposition badge config                            */
+/* ------------------------------------------------------------------ */
+
+const DISPOSITION_CONFIG: Record<CommercialIntakeDisposition, {
+  label: string;
+  icon: React.ReactNode;
+  badge: string;
+}> = {
+  new: {
+    label: "New",
+    icon: <CircleDot size={10} aria-hidden="true" />,
+    badge: "bg-bg-muted text-fg-muted border-border-default",
+  },
+  qualified: {
+    label: "Qualified",
+    icon: <CheckCircle2 size={10} aria-hidden="true" />,
+    badge: "bg-status-success-subtle text-status-success border-status-success/20",
+  },
+  not_qualified: {
+    label: "Not Qualified",
+    icon: <X size={10} aria-hidden="true" />,
+    badge: "bg-bg-muted text-fg-faint border-border-default",
+  },
+  compliance_blocked: {
+    label: "Blocked",
+    icon: <ShieldX size={10} aria-hidden="true" />,
+    badge: "bg-status-danger-subtle text-status-danger border-status-danger/20",
+  },
+  nurture: {
+    label: "Nurture",
+    icon: <Star size={10} aria-hidden="true" />,
+    badge: "bg-status-info-subtle text-status-info border-status-info/20",
+  },
+};
+
+function DispositionBadge({ disposition }: { disposition: CommercialIntakeDisposition }) {
+  const config = DISPOSITION_CONFIG[disposition] ?? DISPOSITION_CONFIG.new;
+  return (
+    <span className={cn(
+      "inline-flex items-center gap-1 rounded-full border px-2 py-0.5",
+      "text-[length:var(--text-caption-size)] font-medium leading-none",
+      config.badge,
+    )}>
+      {config.icon}
+      {config.label}
+    </span>
+  );
+}
+
+function QualificationScoreChip({ score }: { score: number | null }) {
+  if (score === null) {
+    return <span className="text-[length:var(--text-caption-size)] text-fg-faint tabular-nums">—</span>;
+  }
+  const isQualifying = score >= 6;
+  return (
+    <span className={cn(
+      "inline-flex items-center rounded-full border px-1.5 py-0.5",
+      "text-[length:var(--text-caption-size)] font-semibold leading-none tabular-nums",
+      isQualifying
+        ? "bg-status-success-subtle text-status-success border-status-success/20"
+        : "bg-status-warning-subtle text-status-warning border-status-warning/20",
+    )}
+      title={`Qualification score: ${score}/10${isQualifying ? " (qualifies)" : " (below threshold)"}`}
+    >
+      {score}/10
+    </span>
+  );
+}
+
+function formatNextStepDate(dateStr: string | null): string {
+  if (!dateStr) return "—";
+  try {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  } catch {
+    return dateStr;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  CRM Pipeline — intake case row                                     */
+/* ------------------------------------------------------------------ */
+
+function PipelineRow({ item }: { item: CommercialIntakeCaseListItem }) {
+  const isOverdue = item.attention_state === "overdue";
+
+  return (
+    <div className={cn(
+      "flex items-center gap-3 rounded-[var(--radius-md)] border px-3 py-2.5",
+      "transition-colors duration-[var(--duration-fast)]",
+      isOverdue
+        ? "border-status-warning/30 bg-status-warning-subtle border-l-2 border-l-status-warning"
+        : "border-border-default bg-bg-surface hover:bg-bg-muted",
+    )}>
+      {/* Overdue clock indicator */}
+      {isOverdue && (
+        <Clock size={13} className="shrink-0 text-status-warning" aria-hidden="true" />
+      )}
+
+      {/* Lead info */}
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <span className="text-[length:var(--text-small-size)] font-medium text-fg-default truncate">
+            {item.landlord_name}
+          </span>
+          <DispositionBadge disposition={item.disposition} />
+          {item.urgency === "high" && (
+            <span className="inline-flex items-center gap-0.5 text-[length:var(--text-caption-size)] font-medium text-status-danger">
+              <AlertTriangle size={10} aria-hidden="true" />
+              Urgent
+            </span>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+          <span className="text-[length:var(--text-caption-size)] text-fg-muted truncate">
+            {item.primary_contact_email}
+          </span>
+          {item.community && (
+            <span className="text-[length:var(--text-caption-size)] text-fg-faint truncate">
+              {item.community}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Score + compliance */}
+      <div className="shrink-0 flex flex-col items-end gap-1">
+        <QualificationScoreChip score={item.qualification_score} />
+        {item.compliance_path && (
+          <span className="text-[length:var(--text-caption-size)] text-fg-faint capitalize">
+            {item.compliance_path.replace(/_/g, " ")}
+          </span>
+        )}
+      </div>
+
+      {/* Next step date */}
+      <div className="shrink-0 text-right min-w-[80px]">
+        <div className="flex items-center justify-end gap-1">
+          <CalendarClock size={11} className={cn(
+            isOverdue ? "text-status-warning" : "text-fg-faint",
+          )} aria-hidden="true" />
+          <span className={cn(
+            "text-[length:var(--text-caption-size)] font-medium leading-none",
+            isOverdue ? "text-status-warning" : "text-fg-muted",
+          )}>
+            {formatNextStepDate(item.next_step_date)}
+          </span>
+        </div>
+        {isOverdue && (
+          <span className="text-[8px] font-semibold uppercase tracking-wider text-status-warning/80 leading-none mt-0.5 block">
+            Overdue
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  CRM Pipeline panel                                                 */
+/* ------------------------------------------------------------------ */
+
+const DISPOSITION_FILTER_OPTIONS: Array<{ value: CommercialIntakeDisposition | "all"; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "new", label: "New" },
+  { value: "qualified", label: "Qualified" },
+  { value: "not_qualified", label: "Not Qualified" },
+  { value: "compliance_blocked", label: "Blocked" },
+  { value: "nurture", label: "Nurture" },
+];
+
+function CRMPipelinePanel() {
+  const [dispositionFilter, setDispositionFilter] = useState<CommercialIntakeDisposition | "all">("all");
+  const [overdueOnly, setOverdueOnly] = useState(false);
+
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
+    queryKey: ["commercial-intake-cases"],
+    queryFn: () => fetchCommercialIntakeCases(),
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+  });
+
+  const filtered = useMemo(() => {
+    if (!data?.cases) return [];
+    let cases = data.cases;
+    if (dispositionFilter !== "all") {
+      cases = cases.filter((c) => c.disposition === dispositionFilter);
+    }
+    if (overdueOnly) {
+      cases = cases.filter((c) => c.attention_state === "overdue");
+    }
+    return cases;
+  }, [data?.cases, dispositionFilter, overdueOnly]);
+
+  const counts = useMemo(() => {
+    if (!data?.cases) return { total: 0, overdue: 0, qualified: 0, blocked: 0 };
+    const cases = data.cases;
+    return {
+      total: cases.length,
+      overdue: cases.filter((c) => c.attention_state === "overdue").length,
+      qualified: cases.filter((c) => c.disposition === "qualified").length,
+      blocked: cases.filter((c) => c.disposition === "compliance_blocked").length,
+    };
+  }, [data?.cases]);
+
+  return (
+    <div className="flex flex-col gap-4 p-6">
+      {/* Pipeline KPI strip */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          { label: "Total Leads", value: counts.total, icon: <TrendingUp size={14} />, cls: "text-fg-muted" },
+          { label: "Qualified", value: counts.qualified, icon: <CheckCircle2 size={14} />, cls: "text-status-success" },
+          { label: "Overdue", value: counts.overdue, icon: <Clock size={14} />, cls: "text-status-warning" },
+          { label: "Blocked", value: counts.blocked, icon: <ShieldX size={14} />, cls: "text-status-danger" },
+        ].map((stat) => (
+          <div key={stat.label} className={cn(
+            "flex items-center gap-2.5 rounded-[var(--radius-md)] border border-border-default bg-bg-surface px-3 py-2.5",
+          )}>
+            <div className={cn("shrink-0", stat.cls)} aria-hidden="true">{stat.icon}</div>
+            <div>
+              <p className="text-[length:var(--text-caption-size)] text-fg-muted leading-none">{stat.label}</p>
+              {isLoading ? (
+                <Skeleton className="mt-1 h-4 w-6" />
+              ) : (
+                <p className="text-[length:var(--text-h3-size)] font-semibold leading-none mt-0.5 tabular-nums text-fg-default">
+                  {stat.value}
+                </p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters row */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Disposition filter chips */}
+        <div className="flex flex-wrap gap-1">
+          {DISPOSITION_FILTER_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setDispositionFilter(opt.value)}
+              className={cn(
+                "rounded-full border px-3 py-1 text-[length:var(--text-caption-size)] font-medium transition-colors",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+                dispositionFilter === opt.value
+                  ? "border-fg-accent bg-fg-accent/10 text-fg-accent"
+                  : "border-border-default bg-bg-muted text-fg-muted hover:bg-bg-surface hover:text-fg-default",
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Overdue toggle */}
+        <button
+          onClick={() => setOverdueOnly((v) => !v)}
+          className={cn(
+            "flex items-center gap-1.5 rounded-full border px-3 py-1",
+            "text-[length:var(--text-caption-size)] font-medium transition-colors",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+            overdueOnly
+              ? "border-status-warning/40 bg-status-warning-subtle text-status-warning"
+              : "border-border-default bg-bg-muted text-fg-muted hover:bg-bg-surface hover:text-fg-default",
+          )}
+        >
+          <Clock size={11} aria-hidden="true" />
+          Overdue only
+        </button>
+
+        {/* Refresh */}
+        <button
+          onClick={() => void refetch()}
+          className={cn(
+            "ml-auto flex items-center gap-1.5 rounded-[var(--radius-md)] border border-border-default",
+            "px-2.5 py-1 text-[length:var(--text-caption-size)] text-fg-muted",
+            "hover:bg-bg-muted hover:text-fg-default transition-colors",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+          )}
+          aria-label="Refresh pipeline"
+        >
+          <RefreshCw size={12} className={cn(isFetching && "animate-spin")} aria-hidden="true" />
+          Refresh
+        </button>
+      </div>
+
+      {/* Pipeline list */}
+      {isError && (
+        <div className="rounded-[var(--radius-md)] border border-status-danger/20 bg-status-danger-subtle px-3 py-2.5">
+          <p className="text-[length:var(--text-small-size)] text-status-danger">
+            Failed to load pipeline data. Check your permissions.
+          </p>
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="flex flex-col gap-2">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-14 w-full rounded-[var(--radius-md)]" />
+          ))}
+        </div>
+      )}
+
+      {!isLoading && !isError && filtered.length === 0 && (
+        <div className={cn(
+          "flex flex-col items-center justify-center gap-2 py-10",
+          "rounded-[var(--radius-lg)] border border-border-default bg-bg-surface text-center",
+        )}>
+          <TrendingUp size={24} className="text-fg-faint" aria-hidden="true" />
+          <p className="text-[length:var(--text-small-size)] font-medium text-fg-default">
+            {dispositionFilter !== "all" || overdueOnly ? "No leads match your filters" : "No leads in pipeline"}
+          </p>
+          <p className="text-[length:var(--text-caption-size)] text-fg-muted">
+            {dispositionFilter !== "all" || overdueOnly
+              ? "Try adjusting the filters above"
+              : "Open a commercial intake case to start building the pipeline"}
+          </p>
+        </div>
+      )}
+
+      {!isLoading && !isError && filtered.length > 0 && (
+        <div className="flex flex-col gap-2" role="list" aria-label="CRM pipeline leads">
+          {filtered.map((item) => (
+            <div key={item.case_id} role="listitem">
+              <PipelineRow item={item} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main page                                                           */
 /* ------------------------------------------------------------------ */
 
+type PageSurface = "directory" | "pipeline";
+
 export default function LandlordsPage() {
   const { data, isLoading, isError, error, refetch, isFetching } = useLandlordsBootstrap();
+  const [surface, setSurface] = useState<PageSurface>("directory");
   const [activeView, setActiveView] = useState<string>("");
   const [search, setSearch] = useState("");
   const [tierFilter, setTierFilter] = useState<string | null>(null);
@@ -459,26 +801,66 @@ export default function LandlordsPage() {
             <h1 className="text-[length:var(--text-heading-lg-size)] font-semibold text-fg-default">
               Landlords
             </h1>
-            {isFetching && !isLoading && (
+            {isFetching && !isLoading && surface === "directory" && (
               <RefreshCw size={13} className="animate-spin text-fg-faint" aria-hidden="true" />
             )}
           </div>
-          <button
-            onClick={() => void refetch()}
-            className={cn(
-              "flex items-center gap-1.5 rounded-[var(--radius-md)] border border-border-default",
-              "px-3 py-1.5 text-[length:var(--text-small-size)] text-fg-muted",
-              "hover:bg-bg-muted hover:text-fg-default transition-colors",
-              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+          <div className="flex items-center gap-2">
+            {/* Surface toggle */}
+            <div
+              className="flex rounded-[var(--radius-md)] border border-border-default bg-bg-muted p-0.5"
+              role="tablist"
+              aria-label="Page surface"
+            >
+              {(["directory", "pipeline"] as const).map((s) => (
+                <button
+                  key={s}
+                  role="tab"
+                  aria-selected={surface === s}
+                  onClick={() => setSurface(s)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-[calc(var(--radius-md)-2px)] px-3 py-1.5",
+                    "text-[length:var(--text-caption-size)] font-medium capitalize transition-colors",
+                    "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-border-focus",
+                    surface === s
+                      ? "bg-bg-surface text-fg-default shadow-sm"
+                      : "text-fg-muted hover:text-fg-default",
+                  )}
+                >
+                  {s === "directory"
+                    ? <><Briefcase size={12} aria-hidden="true" /> Directory</>
+                    : <><TrendingUp size={12} aria-hidden="true" /> Pipeline</>
+                  }
+                </button>
+              ))}
+            </div>
+            {surface === "directory" && (
+              <button
+                onClick={() => void refetch()}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-[var(--radius-md)] border border-border-default",
+                  "px-3 py-1.5 text-[length:var(--text-small-size)] text-fg-muted",
+                  "hover:bg-bg-muted hover:text-fg-default transition-colors",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+                )}
+              >
+                <RefreshCw size={13} aria-hidden="true" />
+                Refresh
+              </button>
             )}
-          >
-            <RefreshCw size={13} aria-hidden="true" />
-            Refresh
-          </button>
+          </div>
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      {/* Pipeline surface — full width scroll area */}
+      {surface === "pipeline" && (
+        <div className="flex-1 overflow-y-auto">
+          <CRMPipelinePanel />
+        </div>
+      )}
+
+      {/* Directory surface */}
+      <div className={cn("flex flex-1 overflow-hidden", surface !== "directory" && "hidden")}>
         {/* Left: list */}
         <div className={cn(
           "flex flex-col overflow-hidden transition-all duration-200",
