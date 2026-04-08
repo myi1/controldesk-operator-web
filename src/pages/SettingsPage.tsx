@@ -5,7 +5,7 @@
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { LogOut, Monitor, Sun, Moon } from "lucide-react";
+import { LogOut, Monitor, Sun, Moon, ExternalLink } from "lucide-react";
 import { cn } from "../lib/cn";
 import { logout, clearToken } from "../lib/auth";
 import { useTheme } from "../hooks/use-theme";
@@ -116,9 +116,11 @@ export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { rowDensity, setRowDensity, sidebarCollapsed, toggleSidebar } =
     useUIStore();
-  const { userRoles } = useRoleGate();
+  const { userRoles, activeRoles, hasRole, toggleRole } = useRoleGate();
   const { data: currentUser } = useAuthCheck();
   const [signingOut, setSigningOut] = useState(false);
+
+  const canManageUsers = hasRole("System Manager") || hasRole("PM Head");
 
   const handleSignOut = useCallback(async () => {
     setSigningOut(true);
@@ -259,6 +261,91 @@ export default function SettingsPage() {
           </div>
         </SettingsSection>
 
+        {/* Role Management — ISSUE-012 */}
+        <SettingsSection title="Role Management">
+          <div className="space-y-4">
+            <p className="text-[length:var(--text-small-size)] text-fg-muted">
+              Toggle individual roles on or off to control which actions and
+              queue views are available to you. At least one role must remain
+              active.
+            </p>
+
+            {userRoles.length > 0 ? (
+              <ul className="space-y-2">
+                {userRoles.map((role) => {
+                  const isActive = activeRoles.includes(role);
+                  const isLastActive = isActive && activeRoles.length <= 1;
+                  return (
+                    <li
+                      key={role}
+                      className={cn(
+                        "flex items-center justify-between rounded-[var(--radius-md)] border px-4 py-3",
+                        "transition-colors duration-[var(--duration-fast)]",
+                        isActive
+                          ? "border-accent-primary/30 bg-accent-primary-subtle"
+                          : "border-border-default bg-bg-surface",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "text-[length:var(--text-small-size)] font-medium",
+                          isActive ? "text-accent-primary" : "text-fg-muted",
+                        )}
+                      >
+                        {role}
+                      </span>
+                      <Toggle
+                        label={isActive ? "Active" : "Inactive"}
+                        checked={isActive}
+                        disabled={isLastActive}
+                        onCheckedChange={() => toggleRole(role)}
+                      />
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="text-[length:var(--text-small-size)] text-fg-muted">
+                No roles assigned.
+              </p>
+            )}
+
+            <p className="text-[length:var(--text-caption-size)] text-fg-muted">
+              Deactivating a role hides its associated actions and queue views.
+            </p>
+          </div>
+        </SettingsSection>
+
+        {/* User Management — ISSUE-011 (admin roles only) */}
+        {canManageUsers && (
+          <SettingsSection title="User Management">
+            <div className="space-y-3">
+              <p className="text-[length:var(--text-small-size)] text-fg-default">
+                User accounts, role assignments, and access permissions are
+                administered via the backend console.
+              </p>
+              <p className="text-[length:var(--text-small-size)] text-fg-muted">
+                Contact your system administrator or use the link below to
+                access the administration panel.
+              </p>
+              <a
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  "inline-flex items-center gap-1.5",
+                  "text-[length:var(--text-small-size)] font-medium text-accent-primary",
+                  "hover:underline focus-ring rounded-[var(--radius-sm)]",
+                  "transition-colors duration-[var(--duration-fast)]",
+                )}
+              >
+                Open Backend Console
+                <ExternalLink size={13} aria-hidden />
+              </a>
+            </div>
+          </SettingsSection>
+        )}
+
         {/* Account */}
         <SettingsSection title="Account">
           <div className="space-y-4">
@@ -275,18 +362,18 @@ export default function SettingsPage() {
 
             <div>
               <p className="text-[length:var(--text-small-size)] font-medium text-fg-default mb-2">
-                Current roles
+                Active roles
               </p>
               <div className="flex flex-wrap gap-2">
-                {userRoles.length > 0 ? (
-                  userRoles.map((role) => (
+                {activeRoles.length > 0 ? (
+                  activeRoles.map((role) => (
                     <Badge key={role} variant="default" size="sm">
                       {role}
                     </Badge>
                   ))
                 ) : (
                   <span className="text-[length:var(--text-small-size)] text-fg-muted">
-                    No roles assigned
+                    No roles active
                   </span>
                 )}
               </div>

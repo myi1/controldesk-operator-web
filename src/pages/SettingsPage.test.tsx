@@ -18,11 +18,20 @@ vi.mock("../stores/ui-store", () => ({
     setRowDensity: vi.fn(),
     sidebarCollapsed: false,
     toggleSidebar: vi.fn(),
+    activeRoles: ["Operator", "Manager"],
+    setActiveRoles: vi.fn(),
+    toggleRole: vi.fn(),
   }),
 }));
 
 vi.mock("../hooks/use-role-gate", () => ({
-  useRoleGate: () => ({ userRoles: ["Operator", "Manager"] }),
+  useRoleGate: () => ({
+    userRoles: ["Operator", "Manager"],
+    activeRoles: ["Operator", "Manager"],
+    hasRole: (role: string) => ["Operator", "Manager"].includes(role),
+    toggleRole: vi.fn(),
+    canAccessQueue: vi.fn().mockReturnValue(true),
+  }),
 }));
 
 vi.mock("../hooks/use-auth-check", () => ({
@@ -91,11 +100,14 @@ describe("SettingsPage", () => {
     );
   });
 
-  it("displays user roles as badges", () => {
+  it("displays user roles in the Role Management section", () => {
     render(<SettingsPage />, { wrapper: Wrapper });
 
-    expect(screen.getByText("Operator")).toBeInTheDocument();
-    expect(screen.getByText("Manager")).toBeInTheDocument();
+    // Roles appear in the Role Management section list (may appear more than once)
+    const operatorInstances = screen.getAllByText("Operator");
+    const managerInstances = screen.getAllByText("Manager");
+    expect(operatorInstances.length).toBeGreaterThanOrEqual(1);
+    expect(managerInstances.length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders the keyboard shortcuts table with proper column headers", () => {
