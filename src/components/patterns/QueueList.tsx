@@ -287,7 +287,7 @@ export function QueueList({
       }),
       columnHelper.display({
         id: "queue",
-        size: 48,
+        size: 110,
         header: "Queue",
       }),
       columnHelper.accessor("title", {

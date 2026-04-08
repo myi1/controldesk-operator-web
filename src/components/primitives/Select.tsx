@@ -86,7 +86,7 @@ function Select({
                   key={option.value}
                   value={option.value}
                   className={cn(
-                    "relative flex h-8 cursor-pointer select-none items-center rounded-[var(--radius-md)] pl-8 pr-3 text-[length:var(--text-small-size)] text-fg-default outline-none",
+                    "relative flex h-8 cursor-pointer select-none items-center rounded-[var(--radius-md)] pl-8 pr-3 text-[length:var(--text-small-size)] text-fg-default outline-none whitespace-nowrap",
                     "transition-colors duration-[var(--duration-instant)] ease-[var(--ease-default)]",
                     "hover:bg-bg-hover focus:bg-bg-hover",
                     "data-[state=checked]:bg-bg-active data-[state=checked]:text-accent-primary",

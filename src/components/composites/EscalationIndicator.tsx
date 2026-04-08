@@ -1,50 +1,41 @@
 import { AlertTriangle, AlertCircle } from "lucide-react";
 import { cn } from "../../lib/cn";
 import type { EscalationState } from "../../types/enums";
-import { Badge } from "../primitives/Badge";
-
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
 
 export interface EscalationIndicatorProps {
   state: EscalationState;
   className?: string;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Component                                                          */
-/* ------------------------------------------------------------------ */
+const baseClass =
+  "inline-flex items-center gap-0.5 text-[length:var(--text-caption-size)] leading-[var(--text-caption-leading)]";
 
 export function EscalationIndicator({ state, className }: EscalationIndicatorProps) {
-  if (state === "normal") {
-    return null;
-  }
+  if (state === "normal") return null;
 
   if (state === "blocked") {
     return (
-      <Badge variant="warning" size="sm" className={cn("gap-1", className)}>
+      <span className={cn(baseClass, "text-status-warning", className)} aria-label="Blocked">
         <AlertTriangle size={12} aria-hidden="true" />
         Blocked
-      </Badge>
+      </span>
     );
   }
 
   if (state === "escalated") {
     return (
-      <Badge variant="danger" size="sm" className={cn("gap-1", className)}>
+      <span className={cn(baseClass, "text-status-danger", className)} aria-label="Escalated">
         <AlertCircle size={12} aria-hidden="true" />
         Escalated
-      </Badge>
+      </span>
     );
   }
 
-  // Unknown escalation state — render a neutral badge so the operator sees
-  // something is non-standard without misrepresenting it as "Escalated".
+  // Unknown escalation state — muted text fallback
   return (
-    <Badge variant="neutral" size="sm" className={cn("gap-1", className)}>
+    <span className={cn(baseClass, "text-fg-muted", className)}>
       <AlertCircle size={12} aria-hidden="true" />
       {state}
-    </Badge>
+    </span>
   );
 }
