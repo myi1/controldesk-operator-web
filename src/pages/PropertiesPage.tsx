@@ -183,11 +183,15 @@ function PropertyTableRow({
             {row.property_label}
           </span>
         </div>
-        {row.landlord_account_id && (
+        {row.landlord_account_ids && row.landlord_account_ids.length > 1 ? (
+          <p className="mt-0.5 pl-6 text-[length:var(--text-caption-size)] text-fg-faint">
+            Multiple Landlords
+          </p>
+        ) : row.landlord_account_id ? (
           <p className="mt-0.5 pl-6 text-[length:var(--text-caption-size)] text-fg-faint">
             {row.landlord_account_id}
           </p>
-        )}
+        ) : null}
       </td>
 
       {/* Attention state */}
@@ -418,6 +422,11 @@ function PropertyDetailPanel({
                     <p className="text-[length:var(--text-caption-size)] text-fg-muted">
                       {unit.occupancy_state}
                     </p>
+                    {unit.landlord_account_id && (
+                      <p className="text-[length:var(--text-caption-size)] text-fg-faint">
+                        {unit.landlord_account_id}
+                      </p>
+                    )}
                   </div>
                   <AttentionBadge state={unit.attention_state} />
                 </li>
