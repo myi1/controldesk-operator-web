@@ -5,7 +5,7 @@ import { Button } from "../primitives/Button";
 import { Select } from "../primitives/Select";
 import { Toggle } from "../primitives/Toggle";
 import { FilterChip } from "../composites/FilterChip";
-import { ALL_ESCALATION_STATES, type EscalationState } from "../../types/enums";
+import { ALL_ESCALATION_STATES, ALL_OPERATOR_ROLES, type EscalationState } from "../../types/enums";
 import type { QueueFilters } from "../../types/ui";
 
 /* ------------------------------------------------------------------ */
@@ -94,18 +94,12 @@ export function FilterBar({
   filters,
   onFiltersChange,
   statusOptions = [],
+  queueKey,
   totalCount,
 }: FilterBarProps) {
   const handleSearch = useCallback(
     (value: string) => {
       onFiltersChange({ ...filters, search_text: value || undefined });
-    },
-    [filters, onFiltersChange],
-  );
-
-  const handleOwner = useCallback(
-    (value: string) => {
-      onFiltersChange({ ...filters, owner: value || undefined });
     },
     [filters, onFiltersChange],
   );
@@ -176,14 +170,15 @@ export function FilterBar({
           className="w-full sm:w-[140px]"
         />
 
-        {/* Owner filter — debounced text search */}
-        <DebouncedInput
-          key={filters.owner ?? "owner"}
-          initialValue={filters.owner ?? ""}
-          onCommit={handleOwner}
-          placeholder="Owner..."
-          ariaLabel="Filter by owner"
-          className="w-full sm:w-[150px]"
+        {/* Owner filter — role selector */}
+        <Select
+          placeholder="Owner"
+          options={ALL_OPERATOR_ROLES.map((r) => ({ value: r, label: r }))}
+          value={filters.owner}
+          onValueChange={(v) =>
+            onFiltersChange({ ...filters, owner: v || undefined })
+          }
+          className="w-full sm:w-[180px]"
         />
 
         {/* Overdue toggle */}
@@ -215,7 +210,7 @@ export function FilterBar({
 
         {/* Debounced search input */}
         <DebouncedInput
-          key={filters.search_text ?? "search"}
+          key={queueKey ?? "search"}
           initialValue={filters.search_text ?? ""}
           onCommit={handleSearch}
           placeholder="Search..."

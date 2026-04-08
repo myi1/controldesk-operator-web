@@ -40,6 +40,7 @@ export interface QueueListProps {
   onRowDoubleClick: (row: QueueRowType) => void;
   /** When set, overrides filters.owner for the API call (used by My Work to pin current user's role). */
   ownerOverride?: string;
+  onStatusOptionsReady?: (options: string[]) => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -147,6 +148,7 @@ export function QueueList({
   onRowClick,
   onRowDoubleClick,
   ownerOverride,
+  onStatusOptionsReady,
 }: QueueListProps) {
   const effectiveFilters = ownerOverride
     ? { ...filters, owner: ownerOverride }
@@ -192,6 +194,13 @@ export function QueueList({
   useEffect(() => {
     clear();
   }, [queueKey, scopeName, clear]);
+
+  useEffect(() => {
+    const options = data?.queue_context?.status_options;
+    if (options && options.length > 0) {
+      onStatusOptionsReady?.(options);
+    }
+  }, [data?.queue_context?.status_options, onStatusOptionsReady]);
 
   // Bulk actions
   const bulkAction = useBulkAction();

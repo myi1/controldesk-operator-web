@@ -22,11 +22,11 @@ const GROUP_LABELS: Record<QueueGroup, string> = {
 /* ------------------------------------------------------------------ */
 
 const PMS_ENTRIES = [
-  { key: "properties", label: "Properties", path: "/properties", icon: <Building2 size={14} aria-hidden="true" /> },
   { key: "portfolio", label: "Portfolio", path: "/portfolio", icon: <BarChart3 size={14} aria-hidden="true" /> },
+  { key: "buildings", label: "Buildings", path: "/buildings", icon: <Building2 size={14} aria-hidden="true" /> },
   { key: "units", label: "Units", path: "/units", icon: <DoorOpen size={14} aria-hidden="true" /> },
-  { key: "tenants", label: "Tenants", path: "/tenants", icon: <Users size={14} aria-hidden="true" /> },
   { key: "landlords", label: "Landlords", path: "/landlords", icon: <Briefcase size={14} aria-hidden="true" /> },
+  { key: "tenants", label: "Tenants", path: "/tenants", icon: <Users size={14} aria-hidden="true" /> },
   { key: "vendors", label: "Vendors", path: "/vendors", icon: <Wrench size={14} aria-hidden="true" /> },
   { key: "inspections", label: "Inspections", path: "/inspections", icon: <ClipboardList size={14} aria-hidden="true" /> },
 ] as const;
@@ -55,7 +55,7 @@ function PmsSidebarGroup({ collapsed }: { collapsed: boolean }) {
               !open && "-rotate-90",
             )}
           />
-          Properties
+          Buildings
         </button>
       )}
 
