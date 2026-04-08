@@ -83,27 +83,26 @@ export const QueueRow = memo(function QueueRow({
         </div>
       </td>
 
-      {/* Queue badge */}
-      <td className="w-12 px-1">
-        {queueConfig && (
+      {/* Queue label — full name, plain text, colored */}
+      <td className="w-[110px] px-2">
+        {queueConfig ? (
           <span
             className={cn(
-              "inline-flex items-center justify-center",
-              "h-5 min-w-[32px] px-1 rounded-[var(--radius-full)]",
+              "block truncate",
               "text-[length:var(--text-caption-size)] leading-[var(--text-caption-leading)]",
               "font-[number:var(--text-caption-medium-weight)]",
-              "text-white",
             )}
-            style={{ backgroundColor: queueConfig.color }}
+            style={{ color: queueConfig.color }}
+            title={queueConfig.label}
           >
-            {queueConfig.shortLabel}
+            {queueConfig.label}
           </span>
-        )}
+        ) : null}
       </td>
 
-      {/* Title */}
+      {/* Title — primary title + compound context secondary line */}
       <td className="min-w-[200px] px-2">
-        <div className={cn("flex items-center", isActive && "border-l-[3px] border-l-accent-primary pl-2")}>
+        <div className={cn("flex flex-col justify-center", isActive && "border-l-[3px] border-l-accent-primary pl-2")}>
           <span
             className={cn(
               "truncate",
@@ -115,6 +114,23 @@ export const QueueRow = memo(function QueueRow({
           >
             {row.title}
           </span>
+          {(row.property_context || row.unit_context || row.docname) && (() => {
+            const contextLabel = [row.property_context, row.unit_context, row.docname]
+              .filter(Boolean)
+              .join(" · ");
+            return (
+              <span
+                className={cn(
+                  "truncate",
+                  "text-[length:var(--text-caption-size)] leading-[var(--text-caption-leading)]",
+                  "text-fg-muted",
+                )}
+                title={contextLabel}
+              >
+                {contextLabel}
+              </span>
+            );
+          })()}
         </div>
       </td>
 
@@ -126,9 +142,9 @@ export const QueueRow = memo(function QueueRow({
             "text-[length:var(--text-small-size)] leading-[var(--text-small-leading)]",
             "text-fg-muted",
           )}
-          title={row.property_context ?? row.unit_context ?? ""}
+          title={[row.property_context, row.unit_context].filter(Boolean).join(" / ") || undefined}
         >
-          {row.property_context ?? row.unit_context ?? "\u2014"}
+          {[row.property_context, row.unit_context].filter(Boolean).join(" / ") || "\u2014"}
         </span>
       </td>
 
@@ -168,9 +184,12 @@ export const QueueRow = memo(function QueueRow({
             />
           )}
           {linkedCount > 0 && (
-            <span className="inline-flex items-center gap-0.5 text-fg-muted">
+            <span
+              className="inline-flex items-center gap-0.5 text-fg-muted"
+              aria-label={`${linkedCount} linked item${linkedCount !== 1 ? "s" : ""}`}
+            >
               <Link2 size={12} aria-hidden="true" />
-              <span className="text-[length:var(--text-caption-size)]">
+              <span className="text-[length:var(--text-caption-size)]" aria-hidden="true">
                 {linkedCount}
               </span>
             </span>

@@ -1,43 +1,37 @@
 import { cn } from "../../lib/cn";
 import { getStatusEntry } from "../../config/status-config";
 import type { StatusColor } from "../../types/enums";
-import { Badge, type BadgeVariant, type BadgeSize } from "../primitives/Badge";
-
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
 
 export interface StatusBadgeProps {
   status: string;
   queueKey: string;
-  size?: BadgeSize;
+  size?: "sm" | "md";
   className?: string;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Color mapping                                                      */
-/* ------------------------------------------------------------------ */
-
-const colorToBadgeVariant: Record<StatusColor, BadgeVariant> = {
-  info: "info",
-  primary: "default",
-  warning: "warning",
-  danger: "danger",
-  success: "success",
-  neutral: "neutral",
+const colorToTextClass: Record<StatusColor, string> = {
+  success: "text-status-success",
+  warning: "text-status-warning",
+  danger:  "text-status-danger",
+  info:    "text-status-info",
+  primary: "text-accent-primary",
+  neutral: "text-fg-muted",
 };
-
-/* ------------------------------------------------------------------ */
-/*  Component                                                          */
-/* ------------------------------------------------------------------ */
 
 export function StatusBadge({ status, queueKey, size = "md", className }: StatusBadgeProps) {
   const entry = getStatusEntry(queueKey, status);
-  const variant = colorToBadgeVariant[entry.color];
-
   return (
-    <Badge variant={variant} size={size} className={cn(className)}>
+    <span
+      className={cn(
+        size === "sm"
+          ? "text-[length:var(--text-caption-size)] leading-[var(--text-caption-leading)]"
+          : "text-[length:var(--text-small-size)] leading-[var(--text-small-leading)]",
+        "font-[number:var(--text-caption-medium-weight)]",
+        colorToTextClass[entry.color],
+        className,
+      )}
+    >
       {entry.label}
-    </Badge>
+    </span>
   );
 }

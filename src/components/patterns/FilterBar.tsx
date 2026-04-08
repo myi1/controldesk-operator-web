@@ -104,9 +104,26 @@ export function FilterBar({
     [filters, onFiltersChange],
   );
 
+  const escalationOptions = ALL_ESCALATION_STATES.map((s) => ({
+    value: s,
+    label: s.charAt(0).toUpperCase() + s.slice(1),
+  }));
+
+  const statusSelectOptions = statusOptions.map((s) => ({
+    value: s,
+    label: s
+      .split("_")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" "),
+  }));
+
   // Collect active filter chips
   const chips: { key: string; label: string; value: string }[] = [];
-  if (filters.status) chips.push({ key: "status", label: "Status", value: filters.status });
+  if (filters.status) {
+    const statusLabel =
+      statusSelectOptions.find((o) => o.value === filters.status)?.label ?? filters.status;
+    chips.push({ key: "status", label: "Status", value: statusLabel });
+  }
   if (filters.owner) chips.push({ key: "owner", label: "Owner", value: filters.owner });
   if (filters.escalation_state) {
     chips.push({ key: "escalation", label: "Escalation", value: filters.escalation_state });
@@ -125,19 +142,6 @@ export function FilterBar({
   function clearAllFilters() {
     onFiltersChange({});
   }
-
-  const escalationOptions = ALL_ESCALATION_STATES.map((s) => ({
-    value: s,
-    label: s.charAt(0).toUpperCase() + s.slice(1),
-  }));
-
-  const statusSelectOptions = statusOptions.map((s) => ({
-    value: s,
-    label: s
-      .split("_")
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" "),
-  }));
 
   return (
     <div className="flex flex-col gap-2">

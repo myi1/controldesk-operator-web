@@ -202,7 +202,7 @@ export const Sidebar = memo(function Sidebar() {
       }
     }
     return map;
-  }, [data?.queue_summaries]);
+  }, [data]);
 
   // Group entries — QUEUE_CONFIG is module-level const, so these never change.
   // useMemo here is mostly for future-proofing if QUEUE_CONFIG ever becomes dynamic.

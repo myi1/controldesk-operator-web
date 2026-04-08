@@ -7,7 +7,7 @@
 // where they were after re-authenticating.
 // ---------------------------------------------------------------------------
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { clearToken } from "../lib/auth";
@@ -20,7 +20,11 @@ export function useSessionExpiry(): void {
   // Use a ref so the handler closure always reads the latest location
   // without needing to be re-registered on every navigation.
   const locationRef = useRef(location);
-  locationRef.current = location;
+  // Sync after each render via useLayoutEffect to avoid mutating a ref
+  // during render (react-hooks/refs).
+  useLayoutEffect(() => {
+    locationRef.current = location;
+  });
 
   useEffect(() => {
     let handled = false;

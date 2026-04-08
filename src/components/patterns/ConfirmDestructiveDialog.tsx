@@ -69,14 +69,16 @@ export function ConfirmDestructiveDialog({
   const [reason, setReason] = useState("");
   const cancelRef = useRef<HTMLButtonElement>(null);
 
-  // Focus cancel button when dialog opens (keyboard safety)
+  // Focus cancel button when dialog opens; reset reason when it closes.
+  // Reason reset is deferred via setTimeout to avoid a synchronous
+  // setState-in-effect that would cause cascading renders.
   useEffect(() => {
     if (open) {
       const t = setTimeout(() => cancelRef.current?.focus(), 50);
       return () => clearTimeout(t);
-    } else {
-      setReason("");
     }
+    const t = setTimeout(() => setReason(""), 0);
+    return () => clearTimeout(t);
   }, [open]);
 
   const hasBlockers = blockers.length > 0;
