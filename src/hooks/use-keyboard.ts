@@ -2,7 +2,7 @@
 // Keyboard shortcut manager
 // ---------------------------------------------------------------------------
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 export interface KeyboardShortcut {
   /** Key descriptor, e.g. "k", "mod+k", "Escape". */
@@ -40,7 +40,11 @@ function matchesShortcut(e: KeyboardEvent, shortcut: string): boolean {
  */
 export function useKeyboard(shortcuts: KeyboardShortcut[]): void {
   const shortcutsRef = useRef(shortcuts);
-  shortcutsRef.current = shortcuts;
+  // Sync the ref after each render so the keydown handler always sees the
+  // latest shortcuts without needing to re-register the event listener.
+  useLayoutEffect(() => {
+    shortcutsRef.current = shortcuts;
+  });
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {

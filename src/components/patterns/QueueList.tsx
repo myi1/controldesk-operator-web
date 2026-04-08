@@ -119,7 +119,11 @@ function SelectAllHeader({
   rowIdsRef: React.RefObject<string[]>;
 }) {
   const { selectedIds, selectAll, clear } = useSelectionStore();
-  const rowIds = rowIdsRef.current;
+  // Reading the ref during render is intentional: the parent writes it
+  // synchronously before each render so it always reflects the current page's
+  // row IDs without forcing the entire column array to be rebuilt on page turns.
+  // eslint-disable-next-line react-hooks/refs
+  const rowIds = rowIdsRef.current ?? [];
   const allSelected = rowIds.length > 0 && rowIds.every((id) => selectedIds.has(id));
   const someSelected = rowIds.some((id) => selectedIds.has(id));
   return (
@@ -321,14 +325,13 @@ export function QueueList({
         header: "Signals",
       }),
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- columns are stable; SelectAllHeader reads store via hook
     [],
   );
 
   // Table sorting
   const [sorting, setSorting] = useState<SortingState>([]);
 
-  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table is safe here
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table is intentionally used outside React Compiler memoization
   const table = useReactTable({
     data: paginatedRows,
     columns,
