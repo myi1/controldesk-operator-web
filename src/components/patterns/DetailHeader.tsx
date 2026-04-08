@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Copy, Check, Clock, ArrowUpRight } from "lucide-react";
+import { ArrowLeft, Copy, Check, Clock, ArrowUpRight, PlayCircle } from "lucide-react";
 import { cn } from "../../lib/cn";
 import type { CaseDetail, ProtectedAction } from "../../types/api";
 import type { EscalationState } from "../../types/enums";
@@ -18,38 +18,62 @@ import { Tooltip } from "../primitives/Tooltip";
 export interface DetailHeaderProps {
   detail: CaseDetail;
   queueKey: string;
+  /** All protected_actions for the case (used for legacy fallback only) */
   actions: ProtectedAction[];
   userRoles: string[];
   onAction: (actionKey: string) => void;
   backLabel: string;
   backPath: string;
+  /**
+   * Pre-computed primary action from getAvailableActions().
+   * When provided, this takes priority over the internal findPrimaryAction fallback.
+   */
+  continueAction?: { actionKey: string; label: string } | null;
+  /**
+   * Pre-computed utility quick actions (snooze, escalate, assign…) from
+   * getAvailableActions(). When provided, these replace the internal
+   * snooze/escalate keyword detection.
+   */
+  quickActions?: ProtectedAction[];
 }
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
+/** Fallback: first protected_action the user has a role for */
 function findPrimaryAction(
   actions: ProtectedAction[],
   userRoles: string[],
 ): ProtectedAction | null {
   const roleSet = new Set(userRoles);
-  return (
-    actions.find((a) =>
-      a.available_roles.some((r) => roleSet.has(r)),
-    ) ?? null
-  );
+  return actions.find((a) => a.available_roles.some((r) => roleSet.has(r))) ?? null;
 }
 
+/** Fallback: find a secondary action by action_key keyword */
 function findSecondaryAction(
   actions: ProtectedAction[],
   keyword: string,
 ): ProtectedAction | null {
   return (
-    actions.find((a) =>
-      a.action_key.toLowerCase().includes(keyword.toLowerCase()),
-    ) ?? null
+    actions.find((a) => a.action_key.toLowerCase().includes(keyword.toLowerCase())) ?? null
   );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Quick action button icons                                          */
+/* ------------------------------------------------------------------ */
+
+const QUICK_ACTION_ICONS: Record<string, typeof Clock> = {
+  snooze: Clock,
+  escalat: ArrowUpRight,
+};
+
+function getQuickActionIcon(actionKey: string): typeof Clock | undefined {
+  for (const [kw, Icon] of Object.entries(QUICK_ACTION_ICONS)) {
+    if (actionKey.toLowerCase().includes(kw)) return Icon;
+  }
+  return undefined;
 }
 
 /* ------------------------------------------------------------------ */
@@ -64,6 +88,8 @@ export function DetailHeader({
   onAction,
   backLabel,
   backPath,
+  continueAction,
+  quickActions,
 }: DetailHeaderProps) {
   const [copied, setCopied] = useState(false);
 
@@ -73,9 +99,34 @@ export function DetailHeader({
     setTimeout(() => setCopied(false), 2000);
   }, [detail.docname]);
 
-  const primaryAction = findPrimaryAction(actions, userRoles);
-  const snoozeAction = findSecondaryAction(actions, "snooze");
-  const escalateAction = findSecondaryAction(actions, "escalat");
+  // Resolve quick actions: prefer prop, fall back to keyword detection
+  const resolvedQuickActions: Array<{ actionKey: string; label: string; icon?: typeof Clock }> =
+    quickActions !== undefined
+      ? quickActions.slice(0, 3).map((a) => ({
+          actionKey: a.action_key,
+          label: a.label,
+          icon: getQuickActionIcon(a.action_key),
+        }))
+      : (() => {
+          const result: Array<{ actionKey: string; label: string; icon?: typeof Clock }> = [];
+          const snooze = findSecondaryAction(actions, "snooze");
+          if (snooze) result.push({ actionKey: snooze.action_key, label: "Snooze", icon: Clock });
+          const escalate = findSecondaryAction(actions, "escalat");
+          if (escalate) result.push({ actionKey: escalate.action_key, label: "Escalate", icon: ArrowUpRight });
+          return result;
+        })();
+
+  // Resolve primary CTA: prefer continueAction prop, fall back to first protected_action user can run
+  const resolvedPrimary =
+    continueAction !== undefined
+      ? continueAction ?? null
+      : (() => {
+          const pa = findPrimaryAction(actions, userRoles);
+          return pa ? { actionKey: pa.action_key, label: pa.label } : null;
+        })();
+
+  const primaryLabel = resolvedPrimary?.label ?? null;
+  const primaryActionKey = resolvedPrimary?.actionKey ?? null;
 
   return (
     <header
@@ -100,7 +151,7 @@ export function DetailHeader({
         Back to {backLabel}
       </Link>
 
-      {/* Main row: ID + secondary actions */}
+      {/* Main row: ID + quick actions */}
       <div className="mt-2 flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           {/* Case ID - copyable */}
@@ -141,29 +192,22 @@ export function DetailHeader({
           </h1>
         </div>
 
-        {/* Secondary actions */}
-        <div className="flex items-center gap-2 shrink-0">
-          {snoozeAction && (
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={Clock}
-              onClick={() => onAction(snoozeAction.action_key)}
-            >
-              Snooze
-            </Button>
-          )}
-          {escalateAction && (
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={ArrowUpRight}
-              onClick={() => onAction(escalateAction.action_key)}
-            >
-              Escalate
-            </Button>
-          )}
-        </div>
+        {/* Quick action bar — compact ghost buttons */}
+        {resolvedQuickActions.length > 0 && (
+          <div className="flex items-center gap-1.5 shrink-0">
+            {resolvedQuickActions.map((qa) => (
+              <Button
+                key={qa.actionKey}
+                variant="ghost"
+                size="sm"
+                icon={qa.icon}
+                onClick={() => onAction(qa.actionKey)}
+              >
+                {qa.label}
+              </Button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Status row */}
@@ -174,20 +218,19 @@ export function DetailHeader({
           isOverdue={detail.is_overdue}
         />
         <OwnerChip owner={detail.current_owner} />
-        <EscalationIndicator
-          state={detail.escalation_state as EscalationState}
-        />
+        <EscalationIndicator state={detail.escalation_state as EscalationState} />
       </div>
 
-      {/* Primary action */}
-      {primaryAction && (
+      {/* Primary "Continue" action — prominent, full-width on narrow screens */}
+      {primaryActionKey && primaryLabel && (
         <div className="mt-3">
           <Button
             variant="primary"
             size="md"
-            onClick={() => onAction(primaryAction.action_key)}
+            icon={PlayCircle}
+            onClick={() => onAction(primaryActionKey)}
           >
-            {primaryAction.label}
+            {primaryLabel}
           </Button>
         </div>
       )}

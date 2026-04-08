@@ -19,7 +19,6 @@ import { useRoleGate } from "../hooks/use-role-gate";
 import { useToast } from "../components/patterns/NotificationToast";
 import type {
   ProtectedAction,
-  AvailableAction,
   FieldSnapshot,
   ContextSection,
   AuditTimelineEntry,
@@ -33,9 +32,11 @@ const DEFAULT_SLA_BUDGET_MINUTES = 480;
 /** Maximum character length enforced on case notes before submission. */
 const MAX_NOTE_LENGTH = 5000;
 
+import { getAvailableActions, type CaseActionsResult } from "../lib/case-actions";
 import { DetailHeader } from "../components/patterns/DetailHeader";
 import { DetailTabBar } from "../components/patterns/DetailTabBar";
 import { ActivityTimeline } from "../components/patterns/ActivityTimeline";
+import { CaseStagePanel } from "../components/composites/CaseStagePanel";
 
 import { ErrorBanner } from "../components/composites/ErrorBanner";
 import { EmptyState } from "../components/composites/EmptyState";
@@ -203,6 +204,9 @@ function OverviewTab({
   timelineEntries,
   blockerReason,
   blockerMessage,
+  limitations,
+  statusLabel,
+  statusColorClass,
   noteText,
   onNoteTextChange,
   onAddNote,
@@ -213,6 +217,9 @@ function OverviewTab({
   timelineEntries: AuditTimelineEntry[];
   blockerReason: string | undefined;
   blockerMessage: string | undefined;
+  limitations: string[];
+  statusLabel: string;
+  statusColorClass: string;
   noteText: string;
   onNoteTextChange: (text: string) => void;
   onAddNote: () => void;
@@ -284,6 +291,15 @@ function OverviewTab({
 
       {/* Right column */}
       <div className="space-y-4">
+        {/* Stage summary panel */}
+        <CaseStagePanel
+          statusLabel={statusLabel}
+          statusColorClass={statusColorClass}
+          blockerBanner={blockerReason ? { reason: blockerReason, message: blockerMessage ?? "" } : undefined}
+          contextSections={contextSections}
+          limitations={limitations}
+        />
+
         {/* SLA meters */}
         {slaSections.map((section) => (
           <div
@@ -679,55 +695,38 @@ function RelatedTab({
 /* ================================================================== */
 
 function ActionsTab({
-  actions,
-  availableActions: lifecycleTransitions,
+  caseActionsResult,
   userRoles,
   onExecuteAction,
   executingActionKey,
 }: {
-  actions: ProtectedAction[];
-  availableActions?: AvailableAction[];
+  caseActionsResult: CaseActionsResult;
   userRoles: string[];
   onExecuteAction: (actionKey: string) => void;
   executingActionKey: string | null;
 }) {
-  const roleSet = useMemo(() => new Set(userRoles), [userRoles]);
+  const { myTransitions, lockedTransitions, myActions, lockedActions } = caseActionsResult;
 
-  // De-duplicate: skip lifecycle transitions already shown in protected_actions
-  const protectedActionKeys = useMemo(
-    () => new Set(actions.map((a) => a.action_key)),
-    [actions],
-  );
-  const dedupedTransitions = useMemo(
-    () => (lifecycleTransitions ?? []).filter((a) => !protectedActionKeys.has(a.action_key)),
-    [lifecycleTransitions, protectedActionKeys],
-  );
+  const hasContent =
+    myTransitions.length > 0 ||
+    lockedTransitions.length > 0 ||
+    myActions.length > 0 ||
+    lockedActions.length > 0;
 
-  const availableActions = useMemo(
-    () => actions.filter((a) => a.available_roles.some((r) => roleSet.has(r))),
-    [actions, roleSet],
-  );
-
-  const otherActions = useMemo(
-    () =>
-      actions.filter((a) => !a.available_roles.some((r) => roleSet.has(r))),
-    [actions, roleSet],
-  );
-
-  if (actions.length === 0 && dedupedTransitions.length === 0) {
+  if (!hasContent) {
     return (
       <EmptyState
         icon={ShieldCheck}
         title="No actions available"
-        description="There are no protected actions for this case in its current state."
+        description="There are no actions available for this case in its current state."
       />
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Lifecycle transitions — from available_actions (runner engine) */}
-      {dedupedTransitions.length > 0 && (
+      {/* Lifecycle transitions the user can run */}
+      {myTransitions.length > 0 && (
         <section>
           <h3
             className={cn(
@@ -741,7 +740,7 @@ function ActionsTab({
             Transitions
           </h3>
           <div className="space-y-3">
-            {dedupedTransitions.map((action) => (
+            {myTransitions.map((action) => (
               <div
                 key={action.action_key}
                 className="flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border border-border-default bg-bg-default p-4"
@@ -769,8 +768,8 @@ function ActionsTab({
         </section>
       )}
 
-      {/* Available to you */}
-      {availableActions.length > 0 && (
+      {/* Protected actions the user can run */}
+      {myActions.length > 0 && (
         <section>
           <h3
             className={cn(
@@ -782,7 +781,7 @@ function ActionsTab({
             Available to you
           </h3>
           <div className="space-y-3">
-            {availableActions.map((action) => (
+            {myActions.map((action) => (
               <div
                 key={action.action_key}
                 className="flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border border-border-default bg-bg-default p-4"
@@ -805,7 +804,7 @@ function ActionsTab({
                     )}
                   >
                     Scope: {action.permission_scope}
-                    {action.requires_human_release && " \u00b7 Requires confirmation"}
+                    {action.requires_human_release && " · Requires confirmation"}
                   </p>
                 </div>
                 <ActionButton
@@ -820,8 +819,8 @@ function ActionsTab({
         </section>
       )}
 
-      {/* Requires other role */}
-      {otherActions.length > 0 && (
+      {/* Locked transitions */}
+      {lockedTransitions.length > 0 && (
         <section>
           <h3
             className={cn(
@@ -835,7 +834,44 @@ function ActionsTab({
             Requires other role
           </h3>
           <div className="space-y-3">
-            {otherActions.map((action) => (
+            {lockedTransitions.map((action) => (
+              <div
+                key={action.action_key}
+                className="flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border border-border-default bg-bg-default p-4 opacity-60"
+              >
+                <p
+                  className={cn(
+                    "text-[length:var(--text-small-size)] leading-[var(--text-small-leading)]",
+                    "text-fg-default min-w-0",
+                  )}
+                >
+                  {action.label}
+                </p>
+                <Button variant="secondary" size="sm" disabled>
+                  {action.confirmation_required ? "Confirm" : "Run"}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Protected actions requiring other roles */}
+      {lockedActions.length > 0 && (
+        <section>
+          <h3
+            className={cn(
+              "flex items-center gap-1.5",
+              "text-[length:var(--text-small-size)] leading-[var(--text-small-leading)]",
+              "font-[number:var(--text-body-medium-weight)]",
+              "text-fg-muted mb-3",
+            )}
+          >
+            <Lock size={14} aria-hidden="true" />
+            Requires other role
+          </h3>
+          <div className="space-y-3">
+            {lockedActions.map((action) => (
               <div
                 key={action.action_key}
                 className="flex items-center justify-between gap-4 rounded-[var(--radius-lg)] border border-border-default bg-bg-default p-4 opacity-60"
@@ -861,7 +897,7 @@ function ActionsTab({
                 </div>
                 <ActionButton
                   action={action}
-                  userRoles={userRoles}
+                  userRoles={[]}
                   onExecute={onExecuteAction}
                 />
               </div>
@@ -936,6 +972,24 @@ export default function CaseDetailPage() {
   const contextSections = detailResponse?.context_sections ?? [];
   const fieldSnapshot = detailResponse?.field_snapshot ?? [];
   const timelineEntries = timelineResponse?.audit_timeline ?? [];
+
+  // Phase 4: pre-compute categorised actions using the runner registry
+  const caseActionsResult = useMemo(
+    () =>
+      getAvailableActions(
+        detailResponse?.available_actions,
+        actions,
+        userRoles,
+        RUNNER_REGISTRY,
+      ),
+    [detailResponse?.available_actions, actions, userRoles],
+  );
+
+  // Derive a human-readable status for CaseStagePanel
+  const statusLabel = detail
+    ? detail.status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+    : "";
+  const statusColorClass = "text-fg-default"; // CaseStagePanel renders it prominently
 
   // Action execution — defined before handleAction so it can be referenced
   const executeAction = useCallback(
@@ -1124,6 +1178,8 @@ export default function CaseDetailPage() {
         onAction={handleAction}
         backLabel={backLabel}
         backPath={backPath}
+        continueAction={caseActionsResult.continueAction}
+        quickActions={caseActionsResult.quickActions}
       />
 
       {/* Tab bar */}
@@ -1139,6 +1195,9 @@ export default function CaseDetailPage() {
               timelineEntries={timelineEntries}
               blockerReason={detailResponse?.blocker_banner?.reason}
               blockerMessage={detailResponse?.blocker_banner?.message}
+              limitations={detailResponse?.limitations ?? []}
+              statusLabel={statusLabel}
+              statusColorClass={statusColorClass}
               noteText={noteText}
               onNoteTextChange={setNoteText}
               onAddNote={handleAddNote}
@@ -1166,8 +1225,7 @@ export default function CaseDetailPage() {
 
           {activeTab === "actions" && (
             <ActionsTab
-              actions={actions}
-              availableActions={detailResponse?.available_actions}
+              caseActionsResult={caseActionsResult}
               userRoles={userRoles}
               onExecuteAction={handleAction}
               executingActionKey={executingActionKey}
