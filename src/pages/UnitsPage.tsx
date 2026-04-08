@@ -10,15 +10,25 @@ import { useNavigate } from "react-router-dom";
 import {
   DoorOpen, AlertTriangle, Clock, CheckCircle2, Search,
   ChevronRight, X, Briefcase, ArrowUpRight, RefreshCw, Building2,
-  ClipboardList, Plus, Pencil,
+  ClipboardList, Plus, Pencil, Trash2,
 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "../lib/cn";
 import { useUnitsBootstrap } from "../hooks/use-properties";
+import { useRoleGate } from "../hooks/use-role-gate";
+import { deleteUnit } from "../api/property-surfaces";
 import { formatRelative } from "../lib/date";
 import type { UnitRow, PropertyLinkedRow } from "../types/api";
 import { TransitionRunner } from "../components/runners";
 import { RUNNER_REGISTRY } from "../config/runners";
+import { ConfirmDestructiveDialog } from "../components/patterns/ConfirmDestructiveDialog";
 import type { RunnerConfig } from "../types/runner";
+
+const DELETE_ALLOWED_ROLES = [
+  "PM Manager / Senior PM Coordinator",
+  "PM Head",
+  "System Manager",
+];
 
 /* ------------------------------------------------------------------ */
 /*  Attention state badge config                                        */
@@ -295,11 +305,15 @@ function UnitDetailPanel({
   onClose,
   onScheduleInspection,
   onEditUnit,
+  onDeleteUnit,
+  canDelete,
 }: {
   row: UnitRow;
   onClose: () => void;
   onScheduleInspection: (unitId: string) => void;
   onEditUnit: (row: UnitRow) => void;
+  onDeleteUnit: (row: UnitRow) => void;
+  canDelete: boolean;
 }) {
   const navigate = useNavigate();
   const detail = row.detail;
@@ -500,6 +514,29 @@ function UnitDetailPanel({
                 </p>
               </div>
             </button>
+
+            {canDelete && (
+              <button
+                onClick={() => onDeleteUnit(row)}
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-[var(--radius-md)] border border-status-danger/30",
+                  "bg-status-danger-subtle px-3 py-2.5 text-left",
+                  "hover:bg-status-danger/10 hover:border-status-danger/50 transition-colors duration-150",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+                  "cursor-pointer",
+                )}
+              >
+                <Trash2 size={14} className="shrink-0 text-status-danger" aria-hidden="true" />
+                <div>
+                  <p className="text-[length:var(--text-small-size)] font-medium text-status-danger">
+                    Archive Unit
+                  </p>
+                  <p className="text-[length:var(--text-caption-size)] text-status-danger/70">
+                    Remove this unit from active inventory
+                  </p>
+                </div>
+              </button>
+            )}
           </div>
         </section>
       </div>
@@ -517,6 +554,8 @@ const BASE_UPDATE_UNIT_RUNNER = RUNNER_REGISTRY.get("unit.update") as RunnerConf
 
 export default function UnitsPage() {
   const { data, isLoading, isError, error, refetch, isFetching } = useUnitsBootstrap();
+  const queryClient = useQueryClient();
+  const { hasRole } = useRoleGate();
   const [activeView, setActiveView] = useState<string>("");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -526,6 +565,11 @@ export default function UnitsPage() {
   const [editUnitRunner, setEditUnitRunner] = useState<RunnerConfig | null>(null);
   const [editUnitRecordId, setEditUnitRecordId] = useState<string>("");
   const [editUnitOpen, setEditUnitOpen] = useState(false);
+  const [deleteUnitTarget, setDeleteUnitTarget] = useState<UnitRow | null>(null);
+  const [deleteUnitSubmitting, setDeleteUnitSubmitting] = useState(false);
+  const [deleteUnitError, setDeleteUnitError] = useState<string | null>(null);
+
+  const canDelete = DELETE_ALLOWED_ROLES.some((r) => hasRole(r));
 
   const resolvedView = activeView || data?.default_view_key || "units_directory";
 
@@ -617,6 +661,27 @@ export default function UnitsPage() {
     setEditUnitRecordId(row.unit_id);
     setEditUnitOpen(true);
   }, []);
+
+  const handleDeleteUnit = useCallback((row: UnitRow) => {
+    setDeleteUnitError(null);
+    setDeleteUnitTarget(row);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteUnitTarget) return;
+    setDeleteUnitSubmitting(true);
+    setDeleteUnitError(null);
+    try {
+      await deleteUnit(deleteUnitTarget.unit_id);
+      await queryClient.invalidateQueries({ queryKey: ["units-bootstrap"] });
+      setDeleteUnitTarget(null);
+      setSelectedId(null);
+    } catch {
+      setDeleteUnitError("Failed to archive unit. Please try again.");
+    } finally {
+      setDeleteUnitSubmitting(false);
+    }
+  }, [deleteUnitTarget, queryClient]);
 
   if (isLoading) {
     return (
@@ -813,6 +878,8 @@ export default function UnitsPage() {
             onClose={() => setSelectedId(null)}
             onScheduleInspection={handleScheduleInspection}
             onEditUnit={handleEditUnit}
+            onDeleteUnit={handleDeleteUnit}
+            canDelete={canDelete}
           />
         )}
       </div>
@@ -849,6 +916,25 @@ export default function UnitsPage() {
         recordId={editUnitRecordId}
       />
     )}
+    <ConfirmDestructiveDialog
+      open={deleteUnitTarget !== null}
+      onOpenChange={(open) => {
+        if (!open) {
+          setDeleteUnitTarget(null);
+          setDeleteUnitError(null);
+        }
+      }}
+      title="Archive Unit"
+      description={
+        deleteUnitTarget
+          ? `Archive "${deleteUnitTarget.title || deleteUnitTarget.unit_id}"? This removes it from active inventory. The record is retained for audit purposes.`
+          : "Archive this unit?"
+      }
+      confirmLabel="Archive Unit"
+      onConfirm={() => void handleConfirmDelete()}
+      isSubmitting={deleteUnitSubmitting}
+      error={deleteUnitError}
+    />
     </>
   );
 }
