@@ -8,7 +8,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  BarChart3, AlertTriangle, Users, CheckCircle2, Search,
+  BarChart3, AlertTriangle, Users, Search,
   ChevronRight, X, Briefcase, ArrowUpRight, RefreshCw, Home,
 } from "lucide-react";
 import { cn } from "../lib/cn";
@@ -19,68 +19,32 @@ import type { PortfolioRow, PropertyModuleAction } from "../types/api";
 /*  Posture badge config                                                */
 /* ------------------------------------------------------------------ */
 
-const OCCUPANCY_CONFIG: Record<string, { label: string; className: string }> = {
-  "Full": {
-    label: "Full",
-    className: "bg-status-success-subtle text-status-success border-status-success/20",
-  },
-  "Partially Occupied": {
-    label: "Partial",
-    className: "bg-status-info-subtle text-status-info border-status-info/20",
-  },
-  "Vacant": {
-    label: "Vacant",
-    className: "bg-bg-muted text-fg-muted border-border-default",
-  },
+const OCCUPANCY_DOT_CONFIG: Record<string, { label: string; dotClass: string }> = {
+  "Full": { label: "Full", dotClass: "bg-status-success" },
+  "Partially Occupied": { label: "Partial", dotClass: "bg-status-info" },
+  "Vacant": { label: "Vacant", dotClass: "bg-fg-faint" },
 };
 
-const EXCEPTION_CONFIG: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
-  "Critical": {
-    label: "Critical",
-    className: "bg-status-danger-subtle text-status-danger border-status-danger/20",
-    icon: <AlertTriangle size={11} aria-hidden="true" />,
-  },
-  "Warning": {
-    label: "Warning",
-    className: "bg-status-warning-subtle text-status-warning border-status-warning/20",
-    icon: <AlertTriangle size={11} aria-hidden="true" />,
-  },
-  "Clear": {
-    label: "Clear",
-    className: "bg-status-success-subtle text-status-success border-status-success/20",
-    icon: <CheckCircle2 size={11} aria-hidden="true" />,
-  },
+const EXCEPTION_TEXT_CONFIG: Record<string, { label: string; textClass: string }> = {
+  "Critical": { label: "Critical", textClass: "text-status-danger" },
+  "Warning": { label: "Warning", textClass: "text-status-warning" },
+  "Clear": { label: "Clear", textClass: "text-fg-faint" },
 };
 
 function OccupancyBadge({ posture }: { posture: string }) {
-  const config = OCCUPANCY_CONFIG[posture] ?? {
-    label: posture,
-    className: "bg-bg-muted text-fg-muted border-border-default",
-  };
+  const config = OCCUPANCY_DOT_CONFIG[posture] ?? { label: posture, dotClass: "bg-fg-faint" };
   return (
-    <span className={cn(
-      "inline-flex items-center rounded-full border px-2 py-0.5",
-      "text-[length:var(--text-caption-size)] font-medium leading-none",
-      config.className,
-    )}>
-      {config.label}
+    <span className="inline-flex items-center gap-1.5">
+      <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", config.dotClass)} aria-hidden="true" />
+      <span className="text-[length:var(--text-caption-size)] text-fg-muted">{config.label}</span>
     </span>
   );
 }
 
 function ExceptionBadge({ posture }: { posture: string }) {
-  const config = EXCEPTION_CONFIG[posture] ?? {
-    label: posture,
-    className: "bg-bg-muted text-fg-muted border-border-default",
-    icon: null,
-  };
+  const config = EXCEPTION_TEXT_CONFIG[posture] ?? { label: posture, textClass: "text-fg-muted" };
   return (
-    <span className={cn(
-      "inline-flex items-center gap-1 rounded-full border px-2 py-0.5",
-      "text-[length:var(--text-caption-size)] font-medium leading-none",
-      config.className,
-    )}>
-      {config.icon}
+    <span className={cn("text-[length:var(--text-caption-size)] font-medium", config.textClass)}>
       {config.label}
     </span>
   );
@@ -181,7 +145,7 @@ function PortfolioTableRow({
       )}
     >
       {/* Property name */}
-      <td className="px-4 py-3">
+      <td className="px-4 py-2">
         <div className="flex items-center gap-2">
           <BarChart3 size={14} className="shrink-0 text-fg-muted" aria-hidden="true" />
           <span className={cn(
@@ -199,21 +163,21 @@ function PortfolioTableRow({
       </td>
 
       {/* Occupancy */}
-      <td className="px-4 py-3">
+      <td className="px-4 py-2">
         <div className="flex flex-col gap-0.5">
           <OccupancyBadge posture={row.occupancy_posture} />
-          <span className="text-[length:var(--text-caption-size)] tabular-nums text-fg-muted">
+          <span className="text-[length:var(--text-caption-size)] tabular-nums text-fg-faint">
             {row.occupied_unit_count}/{row.unit_count} ({occupancyPct}%)
           </span>
         </div>
       </td>
 
       {/* Exceptions */}
-      <td className="px-4 py-3">
+      <td className="px-4 py-2">
         <div className="flex flex-col gap-0.5">
           <ExceptionBadge posture={row.exception_posture} />
           {row.exception_count > 0 && (
-            <span className="text-[length:var(--text-caption-size)] tabular-nums text-fg-muted">
+            <span className="text-[length:var(--text-caption-size)] tabular-nums text-fg-faint">
               {row.exception_count} exceptions
             </span>
           )}
@@ -221,19 +185,19 @@ function PortfolioTableRow({
       </td>
 
       {/* Stock type */}
-      <td className="hidden px-4 py-3 text-[length:var(--text-small-size)] text-fg-muted md:table-cell">
+      <td className="hidden px-4 py-2 text-[length:var(--text-small-size)] text-fg-muted md:table-cell">
         {row.stock_type || "—"}
       </td>
 
       {/* Lifecycle summary */}
-      <td className="hidden px-4 py-3 text-[length:var(--text-small-size)] text-fg-muted lg:table-cell">
+      <td className="hidden px-4 py-2 text-[length:var(--text-small-size)] text-fg-muted lg:table-cell">
         <span className="line-clamp-1">{row.lifecycle_summary || "—"}</span>
       </td>
 
       {/* Queue cases */}
-      <td className="hidden px-4 py-3 lg:table-cell">
+      <td className="hidden px-4 py-2 lg:table-cell">
         {row.linked_queue_row_count > 0 ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-bg-muted px-2 py-0.5 text-[length:var(--text-caption-size)] text-fg-muted">
+          <span className="inline-flex items-center gap-1 text-[length:var(--text-caption-size)] text-fg-muted">
             <Briefcase size={10} aria-hidden="true" />
             {row.linked_queue_row_count}
           </span>
@@ -243,7 +207,7 @@ function PortfolioTableRow({
       </td>
 
       {/* Chevron */}
-      <td className="px-3 py-3">
+      <td className="px-3 py-2">
         <ChevronRight
           size={14}
           className={cn(
