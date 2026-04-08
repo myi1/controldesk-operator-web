@@ -6,6 +6,7 @@
 // ---------------------------------------------------------------------------
 
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ClipboardList,
   Calendar,
@@ -271,13 +272,18 @@ function FrequencyChip({ frequency }: { frequency: string }) {
 /*  Inspection table row                                                */
 /* ------------------------------------------------------------------ */
 
-function InspectionTableRow({ row }: { row: InspectionCaseRow }) {
+function InspectionTableRow({ row, onNavigate }: { row: InspectionCaseRow; onNavigate: (id: string) => void }) {
   return (
     <tr
       className={cn(
         "group border-b border-border-default transition-colors duration-150",
-        "hover:bg-bg-muted",
+        "hover:bg-bg-muted cursor-pointer",
       )}
+      onClick={() => onNavigate(row.entity_id)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNavigate(row.entity_id); } }}
+      aria-label={`View inspection for unit ${row.property_unit_id}`}
     >
       {/* Unit */}
       <td className="px-4 py-3">
@@ -395,11 +401,16 @@ function LoadingSkeleton() {
 /* ------------------------------------------------------------------ */
 
 export default function InspectionsPage() {
+  const navigate = useNavigate();
   const { data, isLoading, isError, error, refetch, isFetching } =
     useInspectionsBootstrap();
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [scheduleOpen, setScheduleOpen] = useState(false);
+
+  function handleNavigateToDetail(id: string) {
+    void navigate(`/inspections/${id}`);
+  }
 
   const filteredRows = useMemo(() => {
     if (!data) return [];
@@ -580,7 +591,7 @@ export default function InspectionsPage() {
               </thead>
               <tbody>
                 {filteredRows.map((row) => (
-                  <InspectionTableRow key={row.entity_id} row={row} />
+                  <InspectionTableRow key={row.entity_id} row={row} onNavigate={handleNavigateToDetail} />
                 ))}
               </tbody>
             </table>
