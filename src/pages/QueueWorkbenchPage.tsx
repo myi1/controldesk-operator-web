@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, lazy, Suspense } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { Plus } from "lucide-react";
 import { useAuthCheck } from "../hooks/use-auth-check";
 import { cn } from "../lib/cn";
 import { useUIStore } from "../stores/ui-store";
@@ -8,11 +9,40 @@ import { useUrlFilters } from "../hooks/use-url-filters";
 import { ErrorBoundary } from "../ui/ErrorBoundary";
 import { FilterBar } from "../components/patterns/FilterBar";
 import { QueueList } from "../components/patterns/QueueList";
+import { TransitionRunner } from "../components/runners/TransitionRunner";
+import { RUNNER_REGISTRY } from "../config/runners";
 const PreviewPanel = lazy(() =>
   import("../components/patterns/PreviewPanel").then((m) => ({ default: m.PreviewPanel })),
 );
 import { STATUS_CONFIG } from "../config/status-config";
 import type { QueueRow } from "../types/api";
+import type { RunnerConfig } from "../types/runner";
+
+/* ------------------------------------------------------------------ */
+/*  Queue → create runner mapping                                      */
+/*  Only include queues that have a real create runner in the registry */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Maps a queue key to the runner ID that creates a new case for that domain.
+ * A runner is only listed here if it POSTs to a collection endpoint (no {id})
+ * and is confirmed to exist in RUNNER_REGISTRY.
+ *
+ * Currently no domain lifecycle queue has a dedicated "create new case" runner.
+ * This mapping is intentionally empty until backend endpoints are added and
+ * runners are registered. The infrastructure is ready for when they are.
+ */
+const QUEUE_CREATE_RUNNER_MAP: Record<string, string> = {
+  // Example (uncomment when runners exist):
+  // maintenance_control: "maintenance.create",
+  // onboarding_control: "onboarding.open",
+};
+
+/** Button label override per queue key. Falls back to runner title. */
+const QUEUE_CREATE_LABEL: Record<string, string> = {
+  // maintenance_control: "New Ticket",
+  // onboarding_control: "New Case",
+};
 
 /* ------------------------------------------------------------------ */
 /*  Route → queue/scope resolution                                     */
@@ -48,6 +78,16 @@ export default function QueueWorkbenchPage() {
 
   // On My Work, pin current_owner to the user's default role so only their cases appear.
   const ownerOverride = scopeName === "my_work" ? (currentUser?.default_actor_role ?? undefined) : undefined;
+
+  // "New Case" create runner for the current queue (if any)
+  const createRunnerId = QUEUE_CREATE_RUNNER_MAP[queueKey];
+  const createRunner = createRunnerId
+    ? (RUNNER_REGISTRY.get(createRunnerId) as RunnerConfig | undefined)
+    : undefined;
+  const createLabel =
+    QUEUE_CREATE_LABEL[queueKey] ?? createRunner?.title ?? "New Case";
+
+  const [createOpen, setCreateOpen] = useState(false);
 
   const [dynamicStatusOptions, setDynamicStatusOptions] = useState<string[]>([]);
 
@@ -123,12 +163,31 @@ export default function QueueWorkbenchPage() {
       >
         {/* Filter bar */}
         <div className="shrink-0 border-b border-border-default px-[var(--space-4)] py-[var(--space-3)]">
-          <FilterBar
-            filters={filters}
-            onFiltersChange={setFilters}
-            statusOptions={statusOptions}
-            queueKey={queueKey}
-          />
+          <div className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <FilterBar
+                filters={filters}
+                onFiltersChange={setFilters}
+                statusOptions={statusOptions}
+                queueKey={queueKey}
+              />
+            </div>
+            {createRunner && (
+              <button
+                onClick={() => setCreateOpen(true)}
+                className={cn(
+                  "flex shrink-0 items-center gap-1.5 rounded-[var(--radius-md)]",
+                  "bg-action-primary-default px-3 py-1.5 text-[length:var(--text-small-size)] text-white",
+                  "hover:bg-action-primary-hover transition-colors duration-150",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+                  "cursor-pointer",
+                )}
+              >
+                <Plus size={13} aria-hidden="true" />
+                {createLabel}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Queue list */}
@@ -160,6 +219,16 @@ export default function QueueWorkbenchPage() {
             />
           </Suspense>
         </ErrorBoundary>
+      )}
+
+      {/* New Case runner modal — only mounts when a create runner exists for this queue */}
+      {createRunner && (
+        <TransitionRunner
+          config={createRunner}
+          recordId=""
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+        />
       )}
     </div>
   );
