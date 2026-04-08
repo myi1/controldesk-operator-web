@@ -259,6 +259,8 @@ export interface PropertyUnitDetail {
   occupancy_state: string;
   attention_state: string;
   target_date: string;
+  // ISSUE-006: per-unit landlord for multi-landlord buildings
+  landlord_account_id?: string;
 }
 
 export interface PropertyLinkedCase {

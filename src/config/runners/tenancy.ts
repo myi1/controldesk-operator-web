@@ -36,13 +36,16 @@ export const TENANCY_RUNNERS: RunnerConfig[] = [
             type: "date",
             required: false,
           },
+          // ISSUE-003/004: Ejari field is optional at frontend level.
+          // Backend enforces Ejari for all tenancies unconditionally (lines 2951-2960 of operator_shell_service.py).
+          // Backend gap: emirate field not yet in schema — when added, make this conditional on emirate === "Dubai".
           {
             key: "ejari_reference",
             label: "Ejari Reference",
             type: "reference-text",
             required: false,
             placeholder: "EJR-2026-00001",
-            hint: "Ejari registration number from DLD.",
+            hint: "Required for Dubai tenancies. Provide the DLD Ejari registration number. Non-Dubai tenancies may proceed without Ejari — contact your System Manager to configure emirate-based rules.",
           },
           {
             key: "payment_schedule_summary",
