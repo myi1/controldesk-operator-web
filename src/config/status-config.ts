@@ -161,5 +161,9 @@ export function getStatusEntry(
   if (map && status in map) {
     return map[status];
   }
-  return { label: status, color: "neutral", order: 999 };
+  // Humanise unknown status values (e.g. "file_check_pending" → "File Check Pending")
+  const humanLabel = status
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return { label: humanLabel, color: "neutral", order: 999 };
 }

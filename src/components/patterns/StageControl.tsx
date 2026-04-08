@@ -1,4 +1,4 @@
-import { AlertTriangle } from "lucide-react";
+import { Info } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { STATUS_CONFIG, getStatusEntry } from "../../config/status-config";
 import { SubStatusRow } from "../composites/SubStatusRow";
@@ -120,18 +120,18 @@ export function StageControl({
         <BlockerCard reason={blockerBanner.reason} />
       )}
 
-      {/* Limitations list */}
+      {/* System notices / limitations */}
       {limitations && limitations.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-1.5 text-status-warning">
-            <AlertTriangle size={14} aria-hidden="true" />
+          <div className="flex items-center gap-1.5 text-fg-muted">
+            <Info size={14} aria-hidden="true" />
             <span
               className={cn(
                 "text-[length:var(--text-small-size)] leading-[var(--text-small-leading)]",
                 "font-[number:var(--text-body-medium-weight)]",
               )}
             >
-              Missing Artifacts
+              System Notices
             </span>
           </div>
           <ul className="space-y-0.5 pl-5">
