@@ -868,3 +868,63 @@ export interface CommercialIntakeCaseAdvanceResponse {
   disposition: CommercialIntakeDisposition;
   audit_event: Record<string, unknown>;
 }
+
+// ---- Phase 10: Reporting ----
+
+export interface AgedVacancyBucket {
+  bucket: string;
+  label: string;
+  count: number;
+}
+
+export interface AgedVacancyCase {
+  case_id: string;
+  property_unit_id: string | null;
+  status: string;
+  days_in_status: number;
+  age_bucket: string;
+}
+
+export interface AgedVacancyReport {
+  status: string;
+  buckets: AgedVacancyBucket[];
+  cases: AgedVacancyCase[];
+  total_count: number;
+}
+
+export interface FieldCompletenessField {
+  field: string;
+  label: string;
+  missing_count: number;
+  pct: number;
+}
+
+export interface FieldCompletenessEntityType {
+  entity_type: string;
+  label: string;
+  total_count: number;
+  fields: FieldCompletenessField[];
+}
+
+export interface FieldCompletenessReport {
+  status: string;
+  entities: FieldCompletenessEntityType[];
+}
+
+export interface RenewalActionDueItem {
+  case_id: string;
+  tenancy_record_id: string | null;
+  property_unit_id: string | null;
+  contract_end_date: string;
+  days_to_expiry: number;
+  current_owner_role: string;
+  missing_article_notice: boolean;
+  missing_dld_check: boolean;
+  action_urgency: "critical" | "warning";
+}
+
+export interface RenewalActionsDueReport {
+  status: string;
+  items: RenewalActionDueItem[];
+  total_count: number;
+}
