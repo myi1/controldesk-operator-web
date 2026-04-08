@@ -25,6 +25,7 @@ import { VENDOR_RUNNERS, VENDOR_CONFIRM_ACTIONS } from "./vendors";
 import { LANDLORD_RUNNERS, LANDLORD_CONFIRM_ACTIONS } from "./landlords";
 import { UNIT_RUNNERS, UNIT_CONFIRM_ACTIONS } from "./units";
 import { TENANT_RUNNERS, TENANT_CONFIRM_ACTIONS } from "./tenants";
+import { PROPERTY_RUNNERS, PROPERTY_CONFIRM_ACTIONS } from "./properties";
 
 const ALL_CONFIGS: AnyRunnerConfig[] = [
   ...ONBOARDING_RUNNERS,
@@ -50,6 +51,8 @@ const ALL_CONFIGS: AnyRunnerConfig[] = [
   ...UNIT_CONFIRM_ACTIONS,
   ...TENANT_RUNNERS,
   ...TENANT_CONFIRM_ACTIONS,
+  ...PROPERTY_RUNNERS,
+  ...PROPERTY_CONFIRM_ACTIONS,
 ];
 
 export const RUNNER_REGISTRY = new Map<string, AnyRunnerConfig>(

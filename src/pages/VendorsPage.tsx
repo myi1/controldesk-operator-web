@@ -8,14 +8,24 @@
 import { useState, useMemo, useCallback } from "react";
 import {
   Wrench, AlertCircle, Clock, CheckCircle2, Search,
-  ChevronRight, X, RefreshCw, AlertTriangle, Plus,
+  ChevronRight, X, RefreshCw, AlertTriangle, Plus, Trash2,
 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "../lib/cn";
 import { useVendorsBootstrap } from "../hooks/use-properties";
+import { useRoleGate } from "../hooks/use-role-gate";
+import { archiveVendor } from "../api/property-surfaces";
 import type { VendorRow } from "../types/api";
 import { TransitionRunner } from "../components/runners";
 import { RUNNER_REGISTRY } from "../config/runners";
+import { ConfirmDestructiveDialog } from "../components/patterns/ConfirmDestructiveDialog";
 import type { RunnerConfig } from "../types/runner";
+
+const PRIVILEGED_DELETE_ROLES = [
+  "PM Manager / Senior PM Coordinator",
+  "PM Head",
+  "System Manager",
+];
 
 const CREATE_VENDOR_RUNNER = RUNNER_REGISTRY.get("vendor.create") as RunnerConfig | undefined;
 
@@ -266,10 +276,14 @@ function VendorDetailPanel({
   row,
   onClose,
   onRunAction,
+  onDeleteVendor,
+  canDelete,
 }: {
   row: VendorRow;
   onClose: () => void;
   onRunAction: (runnerId: string, recordId: string) => void;
+  onDeleteVendor: (row: VendorRow) => void;
+  canDelete: boolean;
 }) {
   return (
     <aside
@@ -474,6 +488,29 @@ function VendorDetailPanel({
             >
               Update Bank Details
             </button>
+
+            {canDelete && (
+              <button
+                onClick={() => onDeleteVendor(row)}
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-[var(--radius-md)] border border-status-danger/30",
+                  "bg-status-danger-subtle px-3 py-2.5 text-left",
+                  "hover:bg-status-danger/10 hover:border-status-danger/50 transition-colors duration-150",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+                  "cursor-pointer",
+                )}
+              >
+                <Trash2 size={14} className="shrink-0 text-status-danger" aria-hidden="true" />
+                <div>
+                  <p className="text-[length:var(--text-small-size)] font-medium text-status-danger">
+                    Archive Vendor
+                  </p>
+                  <p className="text-[length:var(--text-caption-size)] text-status-danger/70">
+                    Remove this vendor from the active directory
+                  </p>
+                </div>
+              </button>
+            )}
           </div>
         </section>
       </div>
@@ -487,6 +524,8 @@ function VendorDetailPanel({
 
 export default function VendorsPage() {
   const { data, isLoading, isError, error, refetch, isFetching } = useVendorsBootstrap();
+  const queryClient = useQueryClient();
+  const { hasRole } = useRoleGate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -494,6 +533,9 @@ export default function VendorsPage() {
   const [activeRunner, setActiveRunner] = useState<RunnerConfig | null>(null);
   const [activeRunnerId, setActiveRunnerId] = useState<string>("");
   const [runnerOpen, setRunnerOpen] = useState(false);
+  const [deleteVendorTarget, setDeleteVendorTarget] = useState<VendorRow | null>(null);
+  const [deleteVendorSubmitting, setDeleteVendorSubmitting] = useState(false);
+  const [deleteVendorError, setDeleteVendorError] = useState<string | null>(null);
 
   const handleRunAction = useCallback((runnerId: string, recordId: string) => {
     const cfg = RUNNER_REGISTRY.get(runnerId) as RunnerConfig | undefined;
@@ -534,6 +576,27 @@ export default function VendorsPage() {
   const handleRowClick = useCallback((row: VendorRow) => {
     setSelectedId((prev) => (prev === row.entity_id ? null : row.entity_id));
   }, []);
+
+  const handleDeleteVendor = useCallback((row: VendorRow) => {
+    setDeleteVendorError(null);
+    setDeleteVendorTarget(row);
+  }, []);
+
+  const handleConfirmDeleteVendor = useCallback(async () => {
+    if (!deleteVendorTarget) return;
+    setDeleteVendorSubmitting(true);
+    setDeleteVendorError(null);
+    try {
+      await archiveVendor(deleteVendorTarget.entity_id);
+      await queryClient.invalidateQueries({ queryKey: ["vendors-bootstrap"] });
+      setDeleteVendorTarget(null);
+      setSelectedId(null);
+    } catch {
+      setDeleteVendorError("Failed to archive vendor. Please try again.");
+    } finally {
+      setDeleteVendorSubmitting(false);
+    }
+  }, [deleteVendorTarget, queryClient]);
 
   if (isLoading) {
     return (
@@ -758,6 +821,11 @@ export default function VendorsPage() {
             row={selectedRow}
             onClose={() => setSelectedId(null)}
             onRunAction={handleRunAction}
+            onDeleteVendor={handleDeleteVendor}
+            canDelete={
+              selectedRow.verification_status === "pending" ||
+              PRIVILEGED_DELETE_ROLES.some((r) => hasRole(r))
+            }
           />
         )}
       </div>
@@ -779,6 +847,26 @@ export default function VendorsPage() {
           recordId={activeRunnerId}
         />
       )}
+
+      <ConfirmDestructiveDialog
+        open={deleteVendorTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteVendorTarget(null);
+            setDeleteVendorError(null);
+          }
+        }}
+        title="Archive Vendor"
+        description={
+          deleteVendorTarget
+            ? `Archive "${deleteVendorTarget.display_name || deleteVendorTarget.entity_id}"? This removes them from the active vendor directory. The record is retained for audit purposes.`
+            : "Archive this vendor?"
+        }
+        confirmLabel="Archive Vendor"
+        onConfirm={() => void handleConfirmDeleteVendor()}
+        isSubmitting={deleteVendorSubmitting}
+        error={deleteVendorError}
+      />
     </div>
   );
 }

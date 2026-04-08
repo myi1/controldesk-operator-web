@@ -8,15 +8,25 @@
 import { useState, useMemo, useCallback } from "react";
 import {
   Users, AlertTriangle, Clock, CheckCircle2, Search,
-  ChevronRight, X, RefreshCw, Building2, Plus, Pencil,
+  ChevronRight, X, RefreshCw, Building2, Plus, Pencil, Trash2,
 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "../lib/cn";
 import { useTenantsBootstrap } from "../hooks/use-properties";
+import { useRoleGate } from "../hooks/use-role-gate";
+import { archiveTenant } from "../api/property-surfaces";
 import { formatAbsolute } from "../lib/date";
 import type { TenantRow } from "../types/api";
 import { TransitionRunner } from "../components/runners";
 import { RUNNER_REGISTRY } from "../config/runners";
+import { ConfirmDestructiveDialog } from "../components/patterns/ConfirmDestructiveDialog";
 import type { RunnerConfig } from "../types/runner";
+
+const PRIVILEGED_DELETE_ROLES = [
+  "PM Manager / Senior PM Coordinator",
+  "PM Head",
+  "System Manager",
+];
 
 /* ------------------------------------------------------------------ */
 /*  Runner registry lookups                                             */
@@ -287,10 +297,14 @@ function TenantDetailPanel({
   row,
   onClose,
   onEditTenant,
+  onDeleteTenant,
+  canDelete,
 }: {
   row: TenantRow;
   onClose: () => void;
   onEditTenant: (row: TenantRow) => void;
+  onDeleteTenant: (row: TenantRow) => void;
+  canDelete: boolean;
 }) {
   return (
     <aside
@@ -390,12 +404,12 @@ function TenantDetailPanel({
           </dl>
         </section>
 
-        {BASE_UPDATE_TENANT_RUNNER && (
-          <section>
-            <h3 className="mb-2 text-[length:var(--text-caption-size)] font-semibold uppercase tracking-wider text-fg-faint">
-              Quick Actions
-            </h3>
-            <div className="flex flex-col gap-2">
+        <section>
+          <h3 className="mb-2 text-[length:var(--text-caption-size)] font-semibold uppercase tracking-wider text-fg-faint">
+            Quick Actions
+          </h3>
+          <div className="flex flex-col gap-2">
+            {BASE_UPDATE_TENANT_RUNNER && (
               <button
                 onClick={() => onEditTenant(row)}
                 className={cn(
@@ -416,9 +430,31 @@ function TenantDetailPanel({
                   </p>
                 </div>
               </button>
-            </div>
-          </section>
-        )}
+            )}
+            {canDelete && (
+              <button
+                onClick={() => onDeleteTenant(row)}
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-[var(--radius-md)] border border-status-danger/30",
+                  "bg-status-danger-subtle px-3 py-2.5 text-left",
+                  "hover:bg-status-danger/10 hover:border-status-danger/50 transition-colors duration-150",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+                  "cursor-pointer",
+                )}
+              >
+                <Trash2 size={14} className="shrink-0 text-status-danger" aria-hidden="true" />
+                <div>
+                  <p className="text-[length:var(--text-small-size)] font-medium text-status-danger">
+                    Archive Tenant
+                  </p>
+                  <p className="text-[length:var(--text-caption-size)] text-status-danger/70">
+                    Remove this tenancy from active records
+                  </p>
+                </div>
+              </button>
+            )}
+          </div>
+        </section>
       </div>
     </aside>
   );
@@ -430,6 +466,8 @@ function TenantDetailPanel({
 
 export default function TenantsPage() {
   const { data, isLoading, isError, error, refetch, isFetching } = useTenantsBootstrap();
+  const queryClient = useQueryClient();
+  const { hasRole } = useRoleGate();
   const [activeView, setActiveView] = useState<string>("");
   const [search, setSearch] = useState("");
   const [occupancyFilter, setOccupancyFilter] = useState<string | null>(null);
@@ -438,6 +476,9 @@ export default function TenantsPage() {
   const [editTenantRunner, setEditTenantRunner] = useState<RunnerConfig | null>(null);
   const [editTenantRecordId, setEditTenantRecordId] = useState<string>("");
   const [editTenantOpen, setEditTenantOpen] = useState(false);
+  const [deleteTenantTarget, setDeleteTenantTarget] = useState<TenantRow | null>(null);
+  const [deleteTenantSubmitting, setDeleteTenantSubmitting] = useState(false);
+  const [deleteTenantError, setDeleteTenantError] = useState<string | null>(null);
 
   const resolvedView = activeView || data?.default_view_key || "tenants_directory";
 
@@ -517,6 +558,27 @@ export default function TenantsPage() {
     setEditTenantRecordId(row.tenancy_id);
     setEditTenantOpen(true);
   }, []);
+
+  const handleDeleteTenant = useCallback((row: TenantRow) => {
+    setDeleteTenantError(null);
+    setDeleteTenantTarget(row);
+  }, []);
+
+  const handleConfirmDeleteTenant = useCallback(async () => {
+    if (!deleteTenantTarget) return;
+    setDeleteTenantSubmitting(true);
+    setDeleteTenantError(null);
+    try {
+      await archiveTenant(deleteTenantTarget.tenancy_id);
+      await queryClient.invalidateQueries({ queryKey: ["tenants-bootstrap"] });
+      setDeleteTenantTarget(null);
+      setSelectedId(null);
+    } catch {
+      setDeleteTenantError("Failed to archive tenant. Please try again.");
+    } finally {
+      setDeleteTenantSubmitting(false);
+    }
+  }, [deleteTenantTarget, queryClient]);
 
   if (isLoading) {
     return (
@@ -709,6 +771,11 @@ export default function TenantsPage() {
             row={selectedRow}
             onClose={() => setSelectedId(null)}
             onEditTenant={handleEditTenant}
+            onDeleteTenant={handleDeleteTenant}
+            canDelete={
+              selectedRow.status === "Pending" ||
+              PRIVILEGED_DELETE_ROLES.some((r) => hasRole(r))
+            }
           />
         )}
       </div>
@@ -733,6 +800,25 @@ export default function TenantsPage() {
         recordId={editTenantRecordId}
       />
     )}
+    <ConfirmDestructiveDialog
+      open={deleteTenantTarget !== null}
+      onOpenChange={(open) => {
+        if (!open) {
+          setDeleteTenantTarget(null);
+          setDeleteTenantError(null);
+        }
+      }}
+      title="Archive Tenant"
+      description={
+        deleteTenantTarget
+          ? `Archive "${deleteTenantTarget.title || deleteTenantTarget.tenancy_id}"? This removes the tenancy from active records. The record is retained for audit purposes.`
+          : "Archive this tenant?"
+      }
+      confirmLabel="Archive Tenant"
+      onConfirm={() => void handleConfirmDeleteTenant()}
+      isSubmitting={deleteTenantSubmitting}
+      error={deleteTenantError}
+    />
     </>
   );
 }
