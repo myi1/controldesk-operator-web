@@ -174,4 +174,168 @@ export const SERVICE_RECOVERY_RUNNERS: RunnerConfig[] = [
     successMessage: "Service recovery case resolved.",
     allowedRoles: ["PM Manager / Senior PM Coordinator", "Landlord Success Manager"],
   },
+
+  {
+    id: "service_recovery.service_recovery_escalated",
+    title: "Escalate Case",
+    description: "Escalate this service recovery case to senior management for direct intervention.",
+    lifecycle: "service_recovery",
+    endpoint: ADVANCE,
+    method: "POST",
+    mode: "modal",
+    fixedPayload: { target_status: "service_recovery_escalated" },
+    steps: [
+      {
+        label: "Escalation Details",
+        description: "Document the escalation reason and recovery plan before senior handoff.",
+        fields: [
+          {
+            key: "acknowledgement_reference",
+            label: "Escalation Reference",
+            type: "reference-text",
+            required: true,
+            placeholder: "ESC-2026-00123",
+            hint: "Reference for the escalation communication sent to the client.",
+          },
+          {
+            key: "recovery_plan_summary",
+            label: "Escalation Reason & Recovery Plan",
+            type: "textarea",
+            required: true,
+            placeholder:
+              "Case escalated due to unresolved complaint beyond standard SLA. Senior PM to take ownership and contact landlord directly.",
+            minLength: 30,
+          },
+          {
+            key: "target_date",
+            label: "Escalation Resolution Target",
+            type: "date",
+            required: true,
+          },
+          {
+            key: "next_action",
+            label: "Immediate Next Action",
+            type: "text",
+            required: true,
+            placeholder: "PM Head to call landlord within 24 hours",
+          },
+        ],
+      },
+    ],
+    invalidates: INVALIDATES,
+    successMessage: "Case escalated to senior management.",
+    allowedRoles: ["PM Manager / Senior PM Coordinator", "PM Head"],
+  },
+
+  {
+    id: "service_recovery.closed",
+    title: "Close Case",
+    description: "Formally close this service recovery case after resolution is confirmed.",
+    lifecycle: "service_recovery",
+    endpoint: ADVANCE,
+    method: "POST",
+    mode: "modal",
+    fixedPayload: { target_status: "closed" },
+    steps: [
+      {
+        label: "Case Closure",
+        description: "Confirm resolution, document outcomes, and formally close the case.",
+        fields: [
+          {
+            key: "acknowledgement_reference",
+            label: "Closure Acknowledgement Reference",
+            type: "reference-text",
+            required: false,
+            placeholder: "ACK-2026-00456",
+            hint: "Reference to the final closure communication sent to the client.",
+          },
+          {
+            key: "root_cause_summary",
+            label: "Root Cause Summary",
+            type: "textarea",
+            required: true,
+            placeholder:
+              "Root cause identified and addressed. Process improvement implemented to prevent recurrence.",
+            minLength: 20,
+          },
+          {
+            key: "written_summary_reference",
+            label: "Written Summary Reference",
+            type: "reference-text",
+            required: false,
+            placeholder: "RPT-2026-00789",
+          },
+          {
+            key: "notes",
+            label: "Closure Notes",
+            type: "textarea",
+            required: true,
+            placeholder:
+              "Landlord confirmed satisfaction. All commitments fulfilled. Case closed with no outstanding actions.",
+            minLength: 20,
+          },
+          {
+            key: "target_date",
+            label: "Closure Date",
+            type: "date",
+            required: true,
+          },
+          {
+            key: "next_action",
+            label: "Post-Closure Action",
+            type: "text",
+            required: false,
+            placeholder: "30-day follow-up call to confirm continued satisfaction",
+          },
+        ],
+      },
+    ],
+    invalidates: INVALIDATES,
+    successMessage: "Service recovery case closed.",
+    allowedRoles: ["PM Manager / Senior PM Coordinator", "PM Head"],
+  },
+
+  {
+    id: "service_recovery.cancelled_or_not_proceeding",
+    title: "Cancel Case",
+    description:
+      "Cancel this service recovery case — use when the complaint is withdrawn or no longer applicable.",
+    lifecycle: "service_recovery",
+    endpoint: ADVANCE,
+    method: "POST",
+    mode: "modal",
+    fixedPayload: { target_status: "cancelled_or_not_proceeding" },
+    steps: [
+      {
+        label: "Cancellation",
+        description: "Record the reason for cancellation before closing this case.",
+        fields: [
+          {
+            key: "notes",
+            label: "Cancellation Reason",
+            type: "textarea",
+            required: true,
+            placeholder: "Landlord withdrew complaint. No further action required.",
+            minLength: 10,
+          },
+          {
+            key: "target_date",
+            label: "Cancellation Date",
+            type: "date",
+            required: true,
+          },
+          {
+            key: "next_action",
+            label: "Follow-Up Action",
+            type: "text",
+            required: false,
+            placeholder: "Log in CRM and notify PM Coordinator",
+          },
+        ],
+      },
+    ],
+    invalidates: INVALIDATES,
+    successMessage: "Service recovery case cancelled.",
+    allowedRoles: ["PM Manager / Senior PM Coordinator", "PM Head"],
+  },
 ];
