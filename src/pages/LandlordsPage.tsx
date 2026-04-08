@@ -8,14 +8,24 @@
 import { useState, useMemo, useCallback } from "react";
 import {
   Briefcase, AlertTriangle, Clock, CheckCircle2, Search,
-  ChevronRight, X, RefreshCw, Building2, Plus,
+  ChevronRight, X, RefreshCw, Building2, Plus, Trash2,
 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "../lib/cn";
 import { useLandlordsBootstrap } from "../hooks/use-properties";
+import { useRoleGate } from "../hooks/use-role-gate";
+import { archiveLandlord } from "../api/property-surfaces";
 import type { LandlordRow } from "../types/api";
 import { TransitionRunner } from "../components/runners";
 import { RUNNER_REGISTRY } from "../config/runners";
+import { ConfirmDestructiveDialog } from "../components/patterns/ConfirmDestructiveDialog";
 import type { RunnerConfig } from "../types/runner";
+
+const PRIVILEGED_DELETE_ROLES = [
+  "PM Manager / Senior PM Coordinator",
+  "PM Head",
+  "System Manager",
+];
 
 const CREATE_LANDLORD_RUNNER = RUNNER_REGISTRY.get("landlord.create") as RunnerConfig | undefined;
 
@@ -263,10 +273,14 @@ function LandlordDetailPanel({
   row,
   onClose,
   onRunAction,
+  onDeleteLandlord,
+  canDelete,
 }: {
   row: LandlordRow;
   onClose: () => void;
   onRunAction: (runnerId: string, recordId: string) => void;
+  onDeleteLandlord: (row: LandlordRow) => void;
+  canDelete: boolean;
 }) {
   return (
     <aside
@@ -400,6 +414,29 @@ function LandlordDetailPanel({
             >
               Update Approval Matrix
             </button>
+
+            {canDelete && (
+              <button
+                onClick={() => onDeleteLandlord(row)}
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-[var(--radius-md)] border border-status-danger/30",
+                  "bg-status-danger-subtle px-3 py-2.5 text-left",
+                  "hover:bg-status-danger/10 hover:border-status-danger/50 transition-colors duration-150",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+                  "cursor-pointer",
+                )}
+              >
+                <Trash2 size={14} className="shrink-0 text-status-danger" aria-hidden="true" />
+                <div>
+                  <p className="text-[length:var(--text-small-size)] font-medium text-status-danger">
+                    Archive Landlord
+                  </p>
+                  <p className="text-[length:var(--text-caption-size)] text-status-danger/70">
+                    Remove this landlord from active accounts
+                  </p>
+                </div>
+              </button>
+            )}
           </div>
         </section>
       </div>
@@ -413,6 +450,8 @@ function LandlordDetailPanel({
 
 export default function LandlordsPage() {
   const { data, isLoading, isError, error, refetch, isFetching } = useLandlordsBootstrap();
+  const queryClient = useQueryClient();
+  const { hasRole } = useRoleGate();
   const [activeView, setActiveView] = useState<string>("");
   const [search, setSearch] = useState("");
   const [tierFilter, setTierFilter] = useState<string | null>(null);
@@ -421,6 +460,9 @@ export default function LandlordsPage() {
   const [activeRunner, setActiveRunner] = useState<RunnerConfig | null>(null);
   const [activeRunnerId, setActiveRunnerId] = useState<string>("");
   const [runnerOpen, setRunnerOpen] = useState(false);
+  const [deleteLandlordTarget, setDeleteLandlordTarget] = useState<LandlordRow | null>(null);
+  const [deleteLandlordSubmitting, setDeleteLandlordSubmitting] = useState(false);
+  const [deleteLandlordError, setDeleteLandlordError] = useState<string | null>(null);
 
   const handleRunAction = useCallback((runnerId: string, recordId: string) => {
     const cfg = RUNNER_REGISTRY.get(runnerId) as RunnerConfig | undefined;
@@ -429,6 +471,27 @@ export default function LandlordsPage() {
     setActiveRunnerId(recordId);
     setRunnerOpen(true);
   }, []);
+
+  const handleDeleteLandlord = useCallback((row: LandlordRow) => {
+    setDeleteLandlordError(null);
+    setDeleteLandlordTarget(row);
+  }, []);
+
+  const handleConfirmDeleteLandlord = useCallback(async () => {
+    if (!deleteLandlordTarget) return;
+    setDeleteLandlordSubmitting(true);
+    setDeleteLandlordError(null);
+    try {
+      await archiveLandlord(deleteLandlordTarget.landlord_account_id);
+      await queryClient.invalidateQueries({ queryKey: ["landlords-bootstrap"] });
+      setDeleteLandlordTarget(null);
+      setSelectedId(null);
+    } catch {
+      setDeleteLandlordError("Failed to archive landlord. Please try again.");
+    } finally {
+      setDeleteLandlordSubmitting(false);
+    }
+  }, [deleteLandlordTarget, queryClient]);
 
   const resolvedView = activeView || data?.default_view_key || "landlords_directory";
 
@@ -677,6 +740,11 @@ export default function LandlordsPage() {
             row={selectedRow}
             onClose={() => setSelectedId(null)}
             onRunAction={handleRunAction}
+            onDeleteLandlord={handleDeleteLandlord}
+            canDelete={
+              selectedRow.status === "inactive" ||
+              PRIVILEGED_DELETE_ROLES.some((r) => hasRole(r))
+            }
           />
         )}
       </div>
@@ -698,6 +766,26 @@ export default function LandlordsPage() {
           recordId={activeRunnerId}
         />
       )}
+
+      <ConfirmDestructiveDialog
+        open={deleteLandlordTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteLandlordTarget(null);
+            setDeleteLandlordError(null);
+          }
+        }}
+        title="Archive Landlord"
+        description={
+          deleteLandlordTarget
+            ? `Archive "${deleteLandlordTarget.display_name || deleteLandlordTarget.landlord_account_id}"? This removes them from active accounts. The record is retained for audit purposes.`
+            : "Archive this landlord?"
+        }
+        confirmLabel="Archive Landlord"
+        onConfirm={() => void handleConfirmDeleteLandlord()}
+        isSubmitting={deleteLandlordSubmitting}
+        error={deleteLandlordError}
+      />
     </div>
   );
 }

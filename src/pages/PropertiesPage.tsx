@@ -10,13 +10,28 @@ import { useNavigate } from "react-router-dom";
 import {
   Building2, AlertTriangle, Clock, CheckCircle2, Search,
   ChevronRight, X, Users, DoorOpen, Briefcase, ArrowUpRight,
-  RefreshCw, Plus,
+  RefreshCw, Plus, Pencil, Trash2,
 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "../lib/cn";
 import { usePropertiesBootstrap } from "../hooks/use-properties";
+import { useRoleGate } from "../hooks/use-role-gate";
+import { archiveProperty } from "../api/property-surfaces";
 import { formatRelative, formatAbsolute } from "../lib/date";
 import type { PropertyRow, PropertyModuleAction } from "../types/api";
 import { AddPropertyWizard } from "../components/patterns/AddPropertyWizard";
+import { TransitionRunner } from "../components/runners";
+import { RUNNER_REGISTRY } from "../config/runners";
+import { ConfirmDestructiveDialog } from "../components/patterns/ConfirmDestructiveDialog";
+import type { RunnerConfig } from "../types/runner";
+
+const PRIVILEGED_DELETE_ROLES = [
+  "PM Manager / Senior PM Coordinator",
+  "PM Head",
+  "System Manager",
+];
+
+const BASE_UPDATE_PROPERTY_RUNNER = RUNNER_REGISTRY.get("property.update") as RunnerConfig | undefined;
 
 /* ------------------------------------------------------------------ */
 /*  Attention state config                                              */
@@ -287,9 +302,15 @@ function ModuleActionButton({
 function PropertyDetailPanel({
   row,
   onClose,
+  onEditProperty,
+  onDeleteProperty,
+  canDelete,
 }: {
   row: PropertyRow;
   onClose: () => void;
+  onEditProperty: (row: PropertyRow) => void;
+  onDeleteProperty: (row: PropertyRow) => void;
+  canDelete: boolean;
 }) {
   const navigate = useNavigate();
   const { detail } = row;
@@ -486,6 +507,61 @@ function PropertyDetailPanel({
             </div>
           </section>
         )}
+
+        {/* Quick Actions */}
+        {(BASE_UPDATE_PROPERTY_RUNNER || canDelete) && (
+          <section>
+            <h3 className="mb-2 text-[length:var(--text-caption-size)] font-semibold uppercase tracking-wider text-fg-faint">
+              Quick Actions
+            </h3>
+            <div className="flex flex-col gap-2">
+              {BASE_UPDATE_PROPERTY_RUNNER && (
+                <button
+                  onClick={() => onEditProperty(row)}
+                  className={cn(
+                    "flex w-full items-center gap-2.5 rounded-[var(--radius-md)] border border-border-default",
+                    "bg-bg-muted/40 px-3 py-2.5 text-left",
+                    "hover:bg-bg-muted hover:border-border-strong transition-colors duration-150",
+                    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+                    "cursor-pointer",
+                  )}
+                >
+                  <Pencil size={14} className="shrink-0 text-fg-muted" aria-hidden="true" />
+                  <div>
+                    <p className="text-[length:var(--text-small-size)] font-medium text-fg-default">
+                      Edit Building
+                    </p>
+                    <p className="text-[length:var(--text-caption-size)] text-fg-muted">
+                      Update building label and details
+                    </p>
+                  </div>
+                </button>
+              )}
+              {canDelete && (
+                <button
+                  onClick={() => onDeleteProperty(row)}
+                  className={cn(
+                    "flex w-full items-center gap-2.5 rounded-[var(--radius-md)] border border-status-danger/30",
+                    "bg-status-danger-subtle px-3 py-2.5 text-left",
+                    "hover:bg-status-danger/10 hover:border-status-danger/50 transition-colors duration-150",
+                    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+                    "cursor-pointer",
+                  )}
+                >
+                  <Trash2 size={14} className="shrink-0 text-status-danger" aria-hidden="true" />
+                  <div>
+                    <p className="text-[length:var(--text-small-size)] font-medium text-status-danger">
+                      Archive Building
+                    </p>
+                    <p className="text-[length:var(--text-caption-size)] text-status-danger/70">
+                      Remove this building from active inventory
+                    </p>
+                  </div>
+                </button>
+              )}
+            </div>
+          </section>
+        )}
       </div>
     </aside>
   );
@@ -497,10 +573,20 @@ function PropertyDetailPanel({
 
 export default function PropertiesPage() {
   const { data, isLoading, isError, error, refetch, isFetching } = usePropertiesBootstrap();
+  const queryClient = useQueryClient();
+  const { hasRole } = useRoleGate();
   const [activeView, setActiveView] = useState<string>("");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showAddWizard, setShowAddWizard] = useState(false);
+  const [editPropertyRunner, setEditPropertyRunner] = useState<RunnerConfig | null>(null);
+  const [editPropertyRecordId, setEditPropertyRecordId] = useState<string>("");
+  const [editPropertyOpen, setEditPropertyOpen] = useState(false);
+  const [deletePropertyTarget, setDeletePropertyTarget] = useState<PropertyRow | null>(null);
+  const [deletePropertySubmitting, setDeletePropertySubmitting] = useState(false);
+  const [deletePropertyError, setDeletePropertyError] = useState<string | null>(null);
+
+  const canDeleteProperty = PRIVILEGED_DELETE_ROLES.some((r) => hasRole(r));
 
   // Default the active view once data arrives
   const resolvedView = activeView || data?.default_view_key || "properties_directory";
@@ -537,6 +623,47 @@ export default function PropertiesPage() {
       prev === row.property_reference_id ? null : row.property_reference_id,
     );
   }, []);
+
+  const handleEditProperty = useCallback((row: PropertyRow) => {
+    if (!BASE_UPDATE_PROPERTY_RUNNER) return;
+    const prefilled: RunnerConfig = {
+      ...BASE_UPDATE_PROPERTY_RUNNER,
+      steps: BASE_UPDATE_PROPERTY_RUNNER.steps.map((step) => ({
+        ...step,
+        fields: step.fields.map((f) => {
+          switch (f.key) {
+            case "property_label": return { ...f, defaultValue: row.property_label };
+            case "landlord_account_id": return { ...f, defaultValue: row.landlord_account_id };
+            default: return f;
+          }
+        }),
+      })),
+    };
+    setEditPropertyRunner(prefilled);
+    setEditPropertyRecordId(row.property_reference_id);
+    setEditPropertyOpen(true);
+  }, []);
+
+  const handleDeleteProperty = useCallback((row: PropertyRow) => {
+    setDeletePropertyError(null);
+    setDeletePropertyTarget(row);
+  }, []);
+
+  const handleConfirmDeleteProperty = useCallback(async () => {
+    if (!deletePropertyTarget) return;
+    setDeletePropertySubmitting(true);
+    setDeletePropertyError(null);
+    try {
+      await archiveProperty(deletePropertyTarget.property_reference_id);
+      await queryClient.invalidateQueries({ queryKey: ["properties-bootstrap"] });
+      setDeletePropertyTarget(null);
+      setSelectedId(null);
+    } catch {
+      setDeletePropertyError("Failed to archive building. Please try again.");
+    } finally {
+      setDeletePropertySubmitting(false);
+    }
+  }, [deletePropertyTarget, queryClient]);
 
   // ---- Loading ----
   if (isLoading) {
@@ -726,6 +853,9 @@ export default function PropertiesPage() {
           <PropertyDetailPanel
             row={selectedRow}
             onClose={() => setSelectedId(null)}
+            onEditProperty={handleEditProperty}
+            onDeleteProperty={handleDeleteProperty}
+            canDelete={canDeleteProperty}
           />
         )}
       </div>
@@ -733,6 +863,38 @@ export default function PropertiesPage() {
       <AddPropertyWizard
         open={showAddWizard}
         onClose={() => setShowAddWizard(false)}
+      />
+
+      {editPropertyRunner && (
+        <TransitionRunner
+          open={editPropertyOpen}
+          onOpenChange={(open) => {
+            setEditPropertyOpen(open);
+            if (!open) setEditPropertyRunner(null);
+          }}
+          config={editPropertyRunner}
+          recordId={editPropertyRecordId}
+        />
+      )}
+
+      <ConfirmDestructiveDialog
+        open={deletePropertyTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeletePropertyTarget(null);
+            setDeletePropertyError(null);
+          }
+        }}
+        title="Archive Building"
+        description={
+          deletePropertyTarget
+            ? `Archive "${deletePropertyTarget.property_label}"? This removes the building from active inventory. The record is retained for audit purposes.`
+            : "Archive this building?"
+        }
+        confirmLabel="Archive Building"
+        onConfirm={() => void handleConfirmDeleteProperty()}
+        isSubmitting={deletePropertySubmitting}
+        error={deletePropertyError}
       />
     </div>
   );

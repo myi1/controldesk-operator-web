@@ -2,7 +2,7 @@
 // Property surfaces API — Properties, Portfolio, Units, Property Context
 // ---------------------------------------------------------------------------
 
-import { apiGet, apiPost, apiPut, apiDelete } from "./client";
+import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from "./client";
 import type {
   PropertiesBootstrapResponse,
   PortfolioBootstrapResponse,
@@ -98,6 +98,33 @@ export async function fetchVendorDetail(vendorId: string): Promise<VendorDetailR
 
 export async function createVendor(payload: CreateVendorPayload): Promise<CreateVendorResponse> {
   return apiPost<CreateVendorResponse>("/api/v1/vendors", payload);
+}
+
+// ---- Archive (DELETE) operations ----
+
+export async function archiveTenant(tenancyId: string): Promise<void> {
+  return apiDelete<void>(`/api/v1/tenants/${tenancyId}`);
+}
+
+export async function archiveLandlord(landlordId: string): Promise<void> {
+  return apiDelete<void>(`/api/v1/landlords/${landlordId}`);
+}
+
+export async function archiveVendor(vendorId: string): Promise<void> {
+  return apiDelete<void>(`/api/v1/vendors/${vendorId}`);
+}
+
+export async function archiveProperty(propertyId: string): Promise<void> {
+  return apiDelete<void>(`/api/v1/properties/${propertyId}`);
+}
+
+// ---- Property update ----
+
+export async function updateProperty(
+  propertyId: string,
+  payload: Record<string, unknown>,
+): Promise<unknown> {
+  return apiPatch<unknown>(`/api/v1/properties/${propertyId}`, payload);
 }
 
 // ---- Property Context ----
