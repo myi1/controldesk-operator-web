@@ -33,15 +33,12 @@ import type { RunnerConfig } from "../types/runner";
  * runners are registered. The infrastructure is ready for when they are.
  */
 const QUEUE_CREATE_RUNNER_MAP: Record<string, string> = {
-  // Example (uncomment when runners exist):
-  // maintenance_control: "maintenance.create",
-  // onboarding_control: "onboarding.open",
+  maintenance_control: "maintenance.open",
 };
 
 /** Button label override per queue key. Falls back to runner title. */
 const QUEUE_CREATE_LABEL: Record<string, string> = {
-  // maintenance_control: "New Ticket",
-  // onboarding_control: "New Case",
+  maintenance_control: "New Ticket",
 };
 
 /* ------------------------------------------------------------------ */

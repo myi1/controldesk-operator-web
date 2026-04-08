@@ -39,6 +39,95 @@ const LIABILITY_OPTIONS = [
 
 export const MAINTENANCE_RUNNERS: RunnerConfig[] = [
   {
+    id: "maintenance.open",
+    title: "Open Maintenance Ticket",
+    description: "Open a new maintenance ticket for a unit. Assign urgency, issue type, and liability before triaging.",
+    lifecycle: "maintenance",
+    endpoint: "/api/v1/operator-shell/maintenance-tickets",
+    method: "POST",
+    mode: "modal",
+    autoFields: false,
+    // approval_threshold_snapshot is a required backend field that captures the landlord's
+    // approval threshold at the time of ticket creation. Sending 0 is the safe default —
+    // the backend will record this value and use it when determining if approval is needed
+    // during the quote/approval flow. If the landlord has a real threshold, coordinators
+    // should update it via the triage/approval steps.
+    fixedPayload: { approval_threshold_snapshot: 0 },
+    steps: [
+      {
+        label: "Ticket Details",
+        description: "Describe the maintenance issue and assign the key attributes.",
+        fields: [
+          {
+            key: "property_unit_id",
+            label: "Unit",
+            type: "unit-picker",
+            required: true,
+            hint: "Select the unit this maintenance ticket is for.",
+          },
+          {
+            key: "issue_type",
+            label: "Issue Type",
+            type: "select",
+            required: true,
+            options: ISSUE_TYPE_OPTIONS,
+          },
+          {
+            key: "urgency",
+            label: "Urgency",
+            type: "select",
+            required: true,
+            options: URGENCY_OPTIONS,
+          },
+          {
+            key: "liability_view",
+            label: "Liability",
+            type: "select",
+            required: true,
+            options: LIABILITY_OPTIONS,
+          },
+          {
+            key: "report_summary",
+            label: "Issue Description",
+            type: "textarea",
+            required: true,
+            placeholder: "Describe the maintenance issue in detail — location, symptoms, and any relevant history.",
+            minLength: 10,
+          },
+          {
+            key: "estimated_cost",
+            label: "Estimated Cost (AED)",
+            type: "number",
+            required: false,
+            min: 0,
+            hint: "Optional. Provide if a rough cost is known.",
+          },
+          {
+            key: "target_date",
+            label: "Target Resolution Date",
+            type: "date",
+            required: true,
+          },
+          {
+            key: "next_action",
+            label: "First Action",
+            type: "text",
+            required: true,
+            placeholder: "Contact tenant to arrange access for inspection",
+          },
+        ],
+      },
+    ],
+    invalidates: ["operator-shell-bootstrap", "queue-rows", "case-detail"],
+    successMessage: "Maintenance ticket opened.",
+    allowedRoles: ["PM Coordinator", "PM Manager / Senior PM Coordinator", "Maintenance / Vendor Coordinator"],
+  },
+
+  // ISSUE-007: Building-level (common area) maintenance tickets require property_reference_id support.
+  // Backend gap: MaintenanceTicketOpenRequest.property_unit_id is required; property_reference_id is not accepted.
+  // When backend adds property_reference_id support, add a "maintenance.open_building" runner here.
+
+  {
     id: "maintenance.triaged",
     title: "Triage Maintenance Ticket",
     description: "Triage the maintenance issue by assigning urgency, liability view, and target resolution date.",
