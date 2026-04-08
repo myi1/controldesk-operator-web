@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref so PRs don't queue up
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Type · Lint · Test · Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── Quality gates ────────────────────────────────────────────────
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test
+
+      # ── Smoke test — full production build ───────────────────────────
+      - name: Build
+        run: npm run build
+        env:
+          # vite build prints sizes; CI=true keeps output compact
+          CI: "true"
+
+      - name: Verify build output
+        run: |
+          [ -f dist/index.html ] \
+            && echo "✅ dist/index.html present" \
+            || (echo "❌ dist/index.html missing" && exit 1)
+          [ -d dist/assets ] \
+            && echo "✅ dist/assets present" \
+            || (echo "❌ dist/assets missing" && exit 1)
+          echo "Build size: $(du -sh dist/ | cut -f1)"
