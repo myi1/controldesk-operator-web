@@ -55,7 +55,7 @@ const TYPE_CONFIG: Record<string, { label: string; className: string }> = {
   },
   move_out: {
     label: "Move Out",
-    className: "bg-[#FFF3E0] text-[#E65100] border-[#E65100]/20",
+    className: "bg-orange-50 text-orange-700 border-orange-200",
   },
   periodic: {
     label: "Periodic",
@@ -82,7 +82,7 @@ const CONDITION_CONFIG: Record<string, { label: string; className: string }> = {
   },
   poor: {
     label: "Poor",
-    className: "bg-[#FFF3E0] text-[#E65100] border-[#E65100]/20",
+    className: "bg-orange-50 text-orange-700 border-orange-200",
   },
   unacceptable: {
     label: "Unacceptable",
@@ -614,7 +614,7 @@ export default function InspectionDetailPage() {
                 <Badge className={typeConfig.className}>{typeConfig.label}</Badge>
                 <StatusBadge status={data.status} />
                 {data.make_good_required && (
-                  <Badge className="bg-[#FFF3E0] text-[#E65100] border-[#E65100]/20">
+                  <Badge className="bg-orange-50 text-orange-700 border-orange-200">
                     Make Good Required
                   </Badge>
                 )}
