@@ -306,4 +306,54 @@ export const RECEIVABLES_RUNNERS: RunnerConfig[] = [
     successMessage: "Receivables case resolved.",
     allowedRoles: ["PM Manager / Senior PM Coordinator", "PM Head"],
   },
+
+  {
+    id: "receivables.arrears_action_blocked",
+    title: "Log Blocked Action",
+    description: "This case has been flagged as blocked. Record the reason and the action being taken before progressing to resolution.",
+    lifecycle: "receivables",
+    endpoint: ADVANCE,
+    method: "POST",
+    mode: "modal",
+    autoFields: false,
+    fixedPayload: { target_status: "arrears_action_blocked" },
+    steps: [
+      {
+        label: "Log Blocking Action",
+        description: "This case has been flagged as blocked. Record the reason and the action being taken before progressing to resolution.",
+        fields: [
+          {
+            key: "block_reason",
+            label: "Block Reason",
+            type: "select",
+            required: true,
+            options: [
+              { value: "legal_referral", label: "Legal Referral" },
+              { value: "landlord_hold", label: "Landlord Hold Requested" },
+              { value: "disputed_amount", label: "Disputed Amount" },
+              { value: "payment_arrangement", label: "Payment Arrangement Agreed" },
+              { value: "write_off_review", label: "Write-Off Review" },
+              { value: "other", label: "Other" },
+            ],
+          },
+          {
+            key: "resolution_notes",
+            label: "Action Notes",
+            type: "textarea",
+            required: true,
+            placeholder: "Describe the action being taken and next steps...",
+          },
+          {
+            key: "next_review_date",
+            label: "Next Review Date",
+            type: "date",
+            required: false,
+          },
+        ],
+      },
+    ],
+    invalidates: INVALIDATES,
+    successMessage: "Blocked action logged.",
+    allowedRoles: ["PM Coordinator", "Finance / Accounts Support", "PM Manager / Senior PM Coordinator"],
+  },
 ];
