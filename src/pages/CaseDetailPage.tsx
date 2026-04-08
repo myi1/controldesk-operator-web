@@ -438,10 +438,12 @@ function DocumentsTab({
   const hasContent =
     docSections.length > 0 || sigSections.length > 0 || docFields.length > 0;
 
+  const isOnboarding = lifecycle?.toLowerCase().includes("onboarding") ?? false;
+
   if (!hasContent) {
     return (
       <div className="space-y-4">
-        {lifecycle === "onboarding" && (
+        {isOnboarding && (
           <div className="flex justify-start">
             <Button
               variant="secondary"
@@ -464,7 +466,7 @@ function DocumentsTab({
 
   return (
     <div className="space-y-4">
-      {lifecycle === "onboarding" && (
+      {isOnboarding && (
         <div className="flex justify-start">
           <Button
             variant="secondary"
