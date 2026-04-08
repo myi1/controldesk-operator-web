@@ -2,32 +2,49 @@
 // Role gating hook
 // ---------------------------------------------------------------------------
 
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useBootstrap } from "./use-bootstrap";
+import { useUIStore } from "../stores/ui-store";
 
 export function useRoleGate() {
   const { data: bootstrap } = useBootstrap();
+  const activeRoles = useUIStore((s) => s.activeRoles);
+  const setActiveRoles = useUIStore((s) => s.setActiveRoles);
+  const toggleRoleStore = useUIStore((s) => s.toggleRole);
 
-  return useMemo(() => {
-    // Derive role list from the queue summaries' queue_key convention
-    // In production, roles come from the bootstrap response.
-    // For now we derive them from available queue keys.
-    const userRoles: string[] = bootstrap
-      ? bootstrap.role_inbox_summaries.map((r) => r.label)
-      : [];
+  // Derive all assigned roles from bootstrap
+  const userRoles = useMemo<string[]>(
+    () =>
+      bootstrap
+        ? bootstrap.role_inbox_summaries.map((r) => r.label)
+        : [],
+    [bootstrap],
+  );
 
-    const roleSet = new Set(userRoles);
-
-    function hasRole(role: string): boolean {
-      return roleSet.has(role);
+  // Initialise activeRoles from userRoles on first load (empty store = not yet seeded)
+  useEffect(() => {
+    if (userRoles.length > 0 && activeRoles.length === 0) {
+      setActiveRoles(userRoles);
     }
+  }, [userRoles, activeRoles.length, setActiveRoles]);
 
-    function canAccessQueue(queueKey: string): boolean {
-      // If bootstrap data isn't loaded yet, deny access
+  const hasRole = useCallback(
+    (role: string) => activeRoles.includes(role),
+    [activeRoles],
+  );
+
+  const canAccessQueue = useCallback(
+    (queueKey: string): boolean => {
       if (!bootstrap) return false;
       return bootstrap.queue_summaries.some((q) => q.key === queueKey);
-    }
+    },
+    [bootstrap],
+  );
 
-    return { userRoles, hasRole, canAccessQueue };
-  }, [bootstrap]);
+  const toggleRole = useCallback(
+    (role: string) => toggleRoleStore(role),
+    [toggleRoleStore],
+  );
+
+  return { userRoles, activeRoles, hasRole, canAccessQueue, toggleRole };
 }

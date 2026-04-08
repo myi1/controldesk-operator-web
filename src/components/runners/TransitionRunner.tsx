@@ -5,6 +5,7 @@
 import { WizardShell } from "../patterns/WizardShell";
 import { FieldRenderer } from "./FieldRenderer";
 import { useTransitionRunner } from "../../hooks/use-transition-runner";
+import { useRoleGate } from "../../hooks/use-role-gate";
 import { useToast } from "../patterns/NotificationToast";
 import type { RunnerConfig } from "../../types/runner";
 
@@ -24,6 +25,7 @@ export function TransitionRunner({
   onSuccess,
 }: TransitionRunnerProps) {
   const { toast } = useToast();
+  const { activeRoles } = useRoleGate();
 
   const {
     currentStep,
@@ -50,6 +52,15 @@ export function TransitionRunner({
     },
     onClose: () => onOpenChange(false),
   });
+
+  // If the runner restricts to certain roles and none intersect with the user's
+  // active roles, do not render at all (ISSUE-013). Checked after all hooks.
+  if (
+    config.allowedRoles.length > 0 &&
+    !config.allowedRoles.some((r) => activeRoles.includes(r))
+  ) {
+    return null;
+  }
 
   const wizardSteps = config.steps.map((s) => ({ label: s.label }));
 

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ConfirmDialog } from "../composites/ConfirmDialog";
 import { useToast } from "../patterns/NotificationToast";
+import { useRoleGate } from "../../hooks/use-role-gate";
 import { executeConfirmAction } from "../../api/runners";
 import { ApiError } from "../../api/client";
 import type { ConfirmActionConfig } from "../../types/runner";
@@ -44,7 +45,17 @@ export function ConfirmActionRunner({
 }: ConfirmActionRunnerProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { activeRoles } = useRoleGate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // If the runner restricts to certain roles and none intersect with the user's
+  // active roles, do not render at all (ISSUE-013).
+  if (
+    config.allowedRoles.length > 0 &&
+    !config.allowedRoles.some((r) => activeRoles.includes(r))
+  ) {
+    return null;
+  }
 
   const handleConfirm = async () => {
     setIsSubmitting(true);

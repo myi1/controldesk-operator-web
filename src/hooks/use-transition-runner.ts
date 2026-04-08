@@ -201,7 +201,7 @@ export function useTransitionRunner({
 }: UseTransitionRunnerOptions): TransitionRunnerState {
   const queryClient = useQueryClient();
   const { data: bootstrap } = useBootstrap();
-  const { userRoles } = useRoleGate();
+  const { activeRoles: userRoles } = useRoleGate();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [values, setValues] = useState<FieldValues>(() => {

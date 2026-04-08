@@ -5,12 +5,18 @@ import { Avatar } from "../primitives/Avatar";
 import { useUIStore } from "../../stores/ui-store";
 import { useCommandPaletteStore } from "../../stores/command-palette-store";
 import { useTheme } from "../../hooks/use-theme";
+import { useRoleGate } from "../../hooks/use-role-gate";
 import { cn } from "../../lib/cn";
 
 export function TopBar() {
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const openPalette = useCommandPaletteStore((s) => s.open);
   const { resolvedTheme, setTheme, theme } = useTheme();
+  const { userRoles, activeRoles } = useRoleGate();
+
+  // Show role indicator only when user has multiple roles and at least one is inactive
+  const hasDeactivatedRoles =
+    userRoles.length > 1 && activeRoles.length < userRoles.length;
 
   function cycleTheme() {
     if (theme === "light") setTheme("dark");
@@ -67,7 +73,21 @@ export function TopBar() {
 
       {/* User section */}
       <div className="flex items-center gap-2 pl-1">
-        <Avatar name="Operator" size="sm" />
+        <div className="relative">
+          <Avatar name="Operator" size="sm" />
+          {hasDeactivatedRoles && (
+            <span
+              className={cn(
+                "absolute -bottom-0.5 -right-0.5",
+                "flex h-3.5 w-3.5 items-center justify-center rounded-full",
+                "bg-status-warning text-[8px] font-bold text-white leading-none",
+              )}
+              title={`${activeRoles.length} of ${userRoles.length} roles active`}
+            >
+              {activeRoles.length}
+            </span>
+          )}
+        </div>
         <span className="hidden text-[length:var(--text-small-size)] text-fg-default sm:inline">
           Operator
         </span>
