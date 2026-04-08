@@ -201,7 +201,7 @@ export function useTransitionRunner({
 }: UseTransitionRunnerOptions): TransitionRunnerState {
   const queryClient = useQueryClient();
   const { data: bootstrap } = useBootstrap();
-  const { activeRoles: userRoles } = useRoleGate();
+  const { activeRoles } = useRoleGate();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [values, setValues] = useState<FieldValues>(() => {
@@ -231,8 +231,8 @@ export function useTransitionRunner({
 
   // Role check
   const hasRequiredRole = useMemo(
-    () => config.allowedRoles.some((r) => userRoles.includes(r)),
-    [config.allowedRoles, userRoles],
+    () => config.allowedRoles.some((r) => activeRoles.includes(r)),
+    [config.allowedRoles, activeRoles],
   );
 
   // canAdvance: all required fields in the current step are valid and role OK
