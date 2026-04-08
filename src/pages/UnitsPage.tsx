@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 import {
   DoorOpen, AlertTriangle, Clock, CheckCircle2, Search,
   ChevronRight, X, Briefcase, ArrowUpRight, RefreshCw, Building2,
-  ClipboardList,
+  ClipboardList, Plus, Pencil,
 } from "lucide-react";
 import { cn } from "../lib/cn";
 import { useUnitsBootstrap } from "../hooks/use-properties";
@@ -294,10 +294,12 @@ function UnitDetailPanel({
   row,
   onClose,
   onScheduleInspection,
+  onEditUnit,
 }: {
   row: UnitRow;
   onClose: () => void;
   onScheduleInspection: (unitId: string) => void;
+  onEditUnit: (row: UnitRow) => void;
 }) {
   const navigate = useNavigate();
   const detail = row.detail;
@@ -456,6 +458,28 @@ function UnitDetailPanel({
             Quick Actions
           </h3>
           <div className="flex flex-col gap-2">
+            {BASE_UPDATE_UNIT_RUNNER && (
+              <button
+                onClick={() => onEditUnit(row)}
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-[var(--radius-md)] border border-border-default",
+                  "bg-bg-muted/40 px-3 py-2.5 text-left",
+                  "hover:bg-bg-muted hover:border-border-strong transition-colors duration-150",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+                  "cursor-pointer",
+                )}
+              >
+                <Pencil size={14} className="shrink-0 text-fg-muted" aria-hidden="true" />
+                <div>
+                  <p className="text-[length:var(--text-small-size)] font-medium text-fg-default">
+                    Edit Unit
+                  </p>
+                  <p className="text-[length:var(--text-caption-size)] text-fg-muted">
+                    Update unit details and state
+                  </p>
+                </div>
+              </button>
+            )}
             <button
               onClick={() => onScheduleInspection(row.unit_id)}
               className={cn(
@@ -488,6 +512,8 @@ function UnitDetailPanel({
 /* ------------------------------------------------------------------ */
 
 const BASE_SCHEDULE_RUNNER = RUNNER_REGISTRY.get("inspection.schedule") as RunnerConfig | undefined;
+const CREATE_UNIT_RUNNER = RUNNER_REGISTRY.get("unit.create") as RunnerConfig | undefined;
+const BASE_UPDATE_UNIT_RUNNER = RUNNER_REGISTRY.get("unit.update") as RunnerConfig | undefined;
 
 export default function UnitsPage() {
   const { data, isLoading, isError, error, refetch, isFetching } = useUnitsBootstrap();
@@ -496,6 +522,10 @@ export default function UnitsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [inspectionRunnerOpen, setInspectionRunnerOpen] = useState(false);
   const [inspectionRunnerConfig, setInspectionRunnerConfig] = useState<RunnerConfig | null>(null);
+  const [createUnitOpen, setCreateUnitOpen] = useState(false);
+  const [editUnitRunner, setEditUnitRunner] = useState<RunnerConfig | null>(null);
+  const [editUnitRecordId, setEditUnitRecordId] = useState<string>("");
+  const [editUnitOpen, setEditUnitOpen] = useState(false);
 
   const resolvedView = activeView || data?.default_view_key || "units_directory";
 
@@ -549,6 +579,45 @@ export default function UnitsPage() {
     setInspectionRunnerOpen(true);
   }, []);
 
+  const handleEditUnit = useCallback((row: UnitRow) => {
+    if (!BASE_UPDATE_UNIT_RUNNER) return;
+    const prefilled: RunnerConfig = {
+      ...BASE_UPDATE_UNIT_RUNNER,
+      // fixedPayload carries system-managed fields for the PUT (full replacement).
+      // UnitRow[key] index signature provides runtime access to fields not in the
+      // typed interface; falls back to sensible defaults when absent.
+      fixedPayload: {
+        unit_id: row.unit_id,
+        property_reference_id: row.property_reference_id,
+        property_label: row.property_label,
+        readiness_posture: (row["readiness_posture"] as string | undefined) ?? "pending",
+        tenancy_posture: (row["tenancy_posture"] as string | undefined) ?? "vacant",
+        lifecycle_summary: (row["lifecycle_summary"] as string | undefined) ?? "",
+        resident_label: (row["resident_label"] as string | undefined) ?? "",
+        tenant_label: (row["tenant_label"] as string | undefined) ?? "",
+        view_keys: (row["view_keys"] as string[] | undefined) ?? [],
+      },
+      steps: BASE_UPDATE_UNIT_RUNNER.steps.map((step) => ({
+        ...step,
+        fields: step.fields.map((f) => {
+          switch (f.key) {
+            case "title": return { ...f, defaultValue: row.title };
+            case "stock_type": return { ...f, defaultValue: row.stock_type };
+            case "occupancy_state": return { ...f, defaultValue: row.occupancy_state };
+            case "attention_state": return { ...f, defaultValue: row.attention_state };
+            case "landlord_account_id": return { ...f, defaultValue: row.landlord_account_id };
+            case "current_owner": return { ...f, defaultValue: row.current_owner ?? "" };
+            case "target_date": return { ...f, defaultValue: row.target_date ?? "" };
+            default: return f;
+          }
+        }),
+      })),
+    };
+    setEditUnitRunner(prefilled);
+    setEditUnitRecordId(row.unit_id);
+    setEditUnitOpen(true);
+  }, []);
+
   if (isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
@@ -594,18 +663,35 @@ export default function UnitsPage() {
               <RefreshCw size={13} className="animate-spin text-fg-faint" aria-hidden="true" />
             )}
           </div>
-          <button
-            onClick={() => void refetch()}
-            className={cn(
-              "flex items-center gap-1.5 rounded-[var(--radius-md)] border border-border-default",
-              "px-3 py-1.5 text-[length:var(--text-small-size)] text-fg-muted",
-              "hover:bg-bg-muted hover:text-fg-default transition-colors",
-              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+          <div className="flex items-center gap-2">
+            {CREATE_UNIT_RUNNER && (
+              <button
+                onClick={() => setCreateUnitOpen(true)}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-[var(--radius-md)]",
+                  "bg-action-primary-default px-3 py-1.5 text-[length:var(--text-small-size)] text-white",
+                  "hover:bg-action-primary-hover transition-colors duration-150",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+                  "cursor-pointer",
+                )}
+              >
+                <Plus size={13} aria-hidden="true" />
+                Add Unit
+              </button>
             )}
-          >
-            <RefreshCw size={13} aria-hidden="true" />
-            Refresh
-          </button>
+            <button
+              onClick={() => void refetch()}
+              className={cn(
+                "flex items-center gap-1.5 rounded-[var(--radius-md)] border border-border-default",
+                "px-3 py-1.5 text-[length:var(--text-small-size)] text-fg-muted",
+                "hover:bg-bg-muted hover:text-fg-default transition-colors",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+              )}
+            >
+              <RefreshCw size={13} aria-hidden="true" />
+              Refresh
+            </button>
+          </div>
         </div>
       </div>
 
@@ -726,6 +812,7 @@ export default function UnitsPage() {
             row={selectedRow}
             onClose={() => setSelectedId(null)}
             onScheduleInspection={handleScheduleInspection}
+            onEditUnit={handleEditUnit}
           />
         )}
       </div>
@@ -741,6 +828,25 @@ export default function UnitsPage() {
         }}
         config={inspectionRunnerConfig}
         recordId=""
+      />
+    )}
+    {CREATE_UNIT_RUNNER && (
+      <TransitionRunner
+        open={createUnitOpen}
+        onOpenChange={setCreateUnitOpen}
+        config={CREATE_UNIT_RUNNER}
+        recordId=""
+      />
+    )}
+    {editUnitRunner && (
+      <TransitionRunner
+        open={editUnitOpen}
+        onOpenChange={(open) => {
+          setEditUnitOpen(open);
+          if (!open) setEditUnitRunner(null);
+        }}
+        config={editUnitRunner}
+        recordId={editUnitRecordId}
       />
     )}
     </>

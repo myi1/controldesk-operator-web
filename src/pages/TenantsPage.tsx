@@ -8,12 +8,22 @@
 import { useState, useMemo, useCallback } from "react";
 import {
   Users, AlertTriangle, Clock, CheckCircle2, Search,
-  ChevronRight, X, RefreshCw, Building2,
+  ChevronRight, X, RefreshCw, Building2, Plus, Pencil,
 } from "lucide-react";
 import { cn } from "../lib/cn";
 import { useTenantsBootstrap } from "../hooks/use-properties";
 import { formatAbsolute } from "../lib/date";
 import type { TenantRow } from "../types/api";
+import { TransitionRunner } from "../components/runners";
+import { RUNNER_REGISTRY } from "../config/runners";
+import type { RunnerConfig } from "../types/runner";
+
+/* ------------------------------------------------------------------ */
+/*  Runner registry lookups                                             */
+/* ------------------------------------------------------------------ */
+
+const CREATE_TENANT_RUNNER = RUNNER_REGISTRY.get("tenant.create") as RunnerConfig | undefined;
+const BASE_UPDATE_TENANT_RUNNER = RUNNER_REGISTRY.get("tenant.update") as RunnerConfig | undefined;
 
 /* ------------------------------------------------------------------ */
 /*  Attention state badge config                                        */
@@ -276,9 +286,11 @@ function TenantTableRow({
 function TenantDetailPanel({
   row,
   onClose,
+  onEditTenant,
 }: {
   row: TenantRow;
   onClose: () => void;
+  onEditTenant: (row: TenantRow) => void;
 }) {
   return (
     <aside
@@ -377,6 +389,36 @@ function TenantDetailPanel({
             </div>
           </dl>
         </section>
+
+        {BASE_UPDATE_TENANT_RUNNER && (
+          <section>
+            <h3 className="mb-2 text-[length:var(--text-caption-size)] font-semibold uppercase tracking-wider text-fg-faint">
+              Quick Actions
+            </h3>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => onEditTenant(row)}
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-[var(--radius-md)] border border-border-default",
+                  "bg-bg-muted/40 px-3 py-2.5 text-left",
+                  "hover:bg-bg-muted hover:border-border-strong transition-colors duration-150",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+                  "cursor-pointer",
+                )}
+              >
+                <Pencil size={14} className="shrink-0 text-fg-muted" aria-hidden="true" />
+                <div>
+                  <p className="text-[length:var(--text-small-size)] font-medium text-fg-default">
+                    Update Tenancy
+                  </p>
+                  <p className="text-[length:var(--text-caption-size)] text-fg-muted">
+                    Edit contract dates, status, or references
+                  </p>
+                </div>
+              </button>
+            </div>
+          </section>
+        )}
       </div>
     </aside>
   );
@@ -392,6 +434,10 @@ export default function TenantsPage() {
   const [search, setSearch] = useState("");
   const [occupancyFilter, setOccupancyFilter] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [createTenantOpen, setCreateTenantOpen] = useState(false);
+  const [editTenantRunner, setEditTenantRunner] = useState<RunnerConfig | null>(null);
+  const [editTenantRecordId, setEditTenantRecordId] = useState<string>("");
+  const [editTenantOpen, setEditTenantOpen] = useState(false);
 
   const resolvedView = activeView || data?.default_view_key || "tenants_directory";
 
@@ -451,6 +497,27 @@ export default function TenantsPage() {
     setSelectedId((prev) => (prev === row.tenancy_id ? null : row.tenancy_id));
   }, []);
 
+  const handleEditTenant = useCallback((row: TenantRow) => {
+    if (!BASE_UPDATE_TENANT_RUNNER) return;
+    const prefilled: RunnerConfig = {
+      ...BASE_UPDATE_TENANT_RUNNER,
+      steps: BASE_UPDATE_TENANT_RUNNER.steps.map((step) => ({
+        ...step,
+        fields: step.fields.map((f) => {
+          switch (f.key) {
+            case "tenancy_status": return { ...f, defaultValue: row.status ?? "" };
+            case "contract_start_date": return { ...f, defaultValue: row.contract_start_date ?? "" };
+            case "contract_end_date": return { ...f, defaultValue: row.contract_end_date ?? "" };
+            default: return f;
+          }
+        }),
+      })),
+    };
+    setEditTenantRunner(prefilled);
+    setEditTenantRecordId(row.tenancy_id);
+    setEditTenantOpen(true);
+  }, []);
+
   if (isLoading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
@@ -482,6 +549,7 @@ export default function TenantsPage() {
   if (!data) return null;
 
   return (
+    <>
     <div className="flex h-full flex-col overflow-hidden">
       {/* Page header */}
       <div className="border-b border-border-default bg-bg-surface px-6 py-4">
@@ -495,18 +563,35 @@ export default function TenantsPage() {
               <RefreshCw size={13} className="animate-spin text-fg-faint" aria-hidden="true" />
             )}
           </div>
-          <button
-            onClick={() => void refetch()}
-            className={cn(
-              "flex items-center gap-1.5 rounded-[var(--radius-md)] border border-border-default",
-              "px-3 py-1.5 text-[length:var(--text-small-size)] text-fg-muted",
-              "hover:bg-bg-muted hover:text-fg-default transition-colors",
-              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+          <div className="flex items-center gap-2">
+            {CREATE_TENANT_RUNNER && (
+              <button
+                onClick={() => setCreateTenantOpen(true)}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-[var(--radius-md)]",
+                  "bg-action-primary-default px-3 py-1.5 text-[length:var(--text-small-size)] text-white",
+                  "hover:bg-action-primary-hover transition-colors duration-150",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+                  "cursor-pointer",
+                )}
+              >
+                <Plus size={13} aria-hidden="true" />
+                Add Tenant
+              </button>
             )}
-          >
-            <RefreshCw size={13} aria-hidden="true" />
-            Refresh
-          </button>
+            <button
+              onClick={() => void refetch()}
+              className={cn(
+                "flex items-center gap-1.5 rounded-[var(--radius-md)] border border-border-default",
+                "px-3 py-1.5 text-[length:var(--text-small-size)] text-fg-muted",
+                "hover:bg-bg-muted hover:text-fg-default transition-colors",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus",
+              )}
+            >
+              <RefreshCw size={13} aria-hidden="true" />
+              Refresh
+            </button>
+          </div>
         </div>
       </div>
 
@@ -623,9 +708,31 @@ export default function TenantsPage() {
           <TenantDetailPanel
             row={selectedRow}
             onClose={() => setSelectedId(null)}
+            onEditTenant={handleEditTenant}
           />
         )}
       </div>
     </div>
+
+    {CREATE_TENANT_RUNNER && (
+      <TransitionRunner
+        open={createTenantOpen}
+        onOpenChange={setCreateTenantOpen}
+        config={CREATE_TENANT_RUNNER}
+        recordId=""
+      />
+    )}
+    {editTenantRunner && (
+      <TransitionRunner
+        open={editTenantOpen}
+        onOpenChange={(open) => {
+          setEditTenantOpen(open);
+          if (!open) setEditTenantRunner(null);
+        }}
+        config={editTenantRunner}
+        recordId={editTenantRecordId}
+      />
+    )}
+    </>
   );
 }
