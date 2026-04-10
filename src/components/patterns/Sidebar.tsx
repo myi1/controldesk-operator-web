@@ -1,6 +1,6 @@
 import { memo, useState, useMemo } from "react";
 import { NavLink } from "react-router-dom";
-import { ChevronDown, Building2, BarChart3, DoorOpen, Users, Briefcase, Wrench, ClipboardList } from "lucide-react";
+import { ChevronDown, Building2, BarChart3, DoorOpen, Users, Briefcase, Wrench, ClipboardList, Settings } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { Separator } from "../primitives/Separator";
 import { Tooltip } from "../primitives/Tooltip";
@@ -273,6 +273,25 @@ export const Sidebar = memo(function Sidebar() {
 
         {/* PMS surfaces */}
         <PmsSidebarGroup collapsed={collapsed} />
+
+        {/* Settings link — pinned to bottom */}
+        <div className="mt-auto px-3 py-2">
+          <Separator />
+          <NavLink
+            to="/settings"
+            className={({ isActive }) =>
+              cn(
+                "mt-2 flex items-center gap-2 rounded-md px-2 py-1.5",
+                "text-[length:var(--text-small-size)] text-fg-muted",
+                "hover:bg-bg-subtle hover:text-fg-default",
+                isActive && "bg-bg-subtle text-fg-default font-medium",
+              )
+            }
+          >
+            <Settings size={14} aria-hidden="true" />
+            {!collapsed && <span>Settings</span>}
+          </NavLink>
+        </div>
       </nav>
     </aside>
   );
