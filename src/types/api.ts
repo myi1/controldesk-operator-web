@@ -608,6 +608,9 @@ export interface LandlordRow {
   attention_state: string
   target_date: string | null
   view_keys: string[]
+  kyc_complete: boolean
+  bank_details_complete: boolean
+  approval_matrix_complete: boolean
 }
 
 export interface LandlordsBootstrapResponse {
@@ -615,6 +618,99 @@ export interface LandlordsBootstrapResponse {
   summary_cards: SummaryCard[]
   view_summaries: ViewSummary[]
   default_view_key: string
+}
+
+export interface LandlordDetailResponse {
+  landlord_account_id: string
+  display_name: string
+  service_tier: string | null
+  status: string
+  unit_count: number
+  active_tenancy_count: number
+  unit_ids: string[]
+  tenancy_ids: string[]
+  maintenance_threshold_per_job_aed: number | null
+  emergency_authority_aed: number | null
+  approval_contact_name: string | null
+  approval_contact_channel: string | null
+  response_window_hours: number | null
+  bank_beneficiary_name: string | null
+  bank_name: string | null
+  bank_iban: string | null
+  bank_currency: string | null
+  bank_authority_proof_ref: string | null
+  bank_payment_confirmation_contact: string | null
+  bank_details_verified_at: string | null
+  bank_details_verified_by: string | null
+  kyc_passport_ref: string | null
+  kyc_visa_ref: string | null
+  kyc_title_deed_ref: string | null
+  kyc_company_docs_ref: string | null
+  kyc_poa_ref: string | null
+  kyc_completed_at: string | null
+  kyc_verified_by: string | null
+  fee_basis_type: string | null
+  fee_percentage: number | null
+  fixed_fee_amount_aed: number | null
+  vat_applicable: boolean | null
+  billing_cycle: string | null
+  internal_family_account: boolean | null
+  fee_exception_note: string | null
+  reporting_recipients: string | null
+  preferred_channel: string | null
+  language: string | null
+  timezone: string | null
+  banking_preference: string | null
+  kyc_complete: boolean
+  bank_details_complete: boolean
+  approval_matrix_complete: boolean
+}
+
+export interface LandlordApprovalMatrixRequest {
+  maintenance_threshold_per_job_aed?: number | null
+  emergency_authority_aed?: number | null
+  approval_contact_name?: string | null
+  approval_contact_channel?: string | null
+  response_window_hours?: number | null
+}
+
+export interface LandlordBankDetailsRequest {
+  bank_beneficiary_name?: string | null
+  bank_name?: string | null
+  bank_iban?: string | null
+  bank_currency?: string | null
+  bank_authority_proof_ref?: string | null
+  bank_payment_confirmation_contact?: string | null
+  bank_details_verified_at?: string | null
+  bank_details_verified_by?: string | null
+}
+
+export interface LandlordKycRequest {
+  kyc_passport_ref?: string | null
+  kyc_visa_ref?: string | null
+  kyc_title_deed_ref?: string | null
+  kyc_company_docs_ref?: string | null
+  kyc_poa_ref?: string | null
+  kyc_completed_at?: string | null
+  kyc_verified_by?: string | null
+}
+
+export interface LandlordFeeAgreementRequest {
+  fee_basis_type?: string | null
+  fee_percentage?: number | null
+  fixed_fee_amount_aed?: number | null
+  vat_applicable?: boolean | null
+  billing_cycle?: string | null
+  internal_family_account?: boolean | null
+  fee_exception_note?: string | null
+}
+
+export interface LandlordProfileRequest {
+  reporting_recipients?: string | null
+  preferred_channel?: string | null
+  language?: string | null
+  timezone?: string | null
+  banking_preference?: string | null
 }
 
 // ---- Tenancy record detail ----
@@ -946,4 +1042,224 @@ export interface InspectionDetailResponse {
   report_reference?: string | null;
   next_inspection_due?: string | null;
   dilapidation_items: DilapidationItemRow[];
+}
+
+// ---- Phase 7: Occupied-Unit Takeover ----
+
+export interface TakeoverGapCreateRequest {
+  gap_category: string
+  description: string
+  severity: string
+  owner: string
+  due_date?: string | null
+  closure_evidence?: string | null
+}
+
+export interface TakeoverGapUpdateRequest {
+  status?: string | null
+  closure_evidence?: string | null
+  severity?: string | null
+  due_date?: string | null
+}
+
+export interface TakeoverGapResponse {
+  gap_id: string
+  onboarding_case_id: string
+  gap_category: string
+  description: string
+  severity: string
+  owner: string
+  due_date?: string | null
+  status: string
+  closure_evidence?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface TakeoverGapListResponse {
+  onboarding_case_id: string
+  gaps: TakeoverGapResponse[]
+}
+
+export interface TakeoverOpeningBalanceRequest {
+  outstanding_rent_aed: number
+  deposit_holder: string
+  deposit_amount_aed: number
+  deposit_basis: string
+  pending_utility_bills_aed: number
+  pending_maintenance_issues?: string | null
+  arrears_acknowledged: boolean
+  arrears_acknowledged_by?: string | null
+}
+
+export interface TakeoverOpeningBalanceResponse {
+  onboarding_case_id: string
+  outstanding_rent_aed: number
+  deposit_holder: string
+  deposit_amount_aed: number
+  deposit_basis: string
+  pending_utility_bills_aed: number
+  pending_maintenance_issues?: string | null
+  arrears_acknowledged: boolean
+  arrears_acknowledged_by?: string | null
+  opening_balance_locked_at: string
+  opening_balance_locked_by: string
+}
+
+export interface TakeoverPortalActivationRequest {
+  tenant_email: string
+  activation_confirmed: boolean
+  training_sent_at?: string | null
+}
+
+export interface TakeoverPortalActivationResponse {
+  onboarding_case_id: string
+  tenant_email: string
+  activation_confirmed: boolean
+  portal_user_created_at: string
+  portal_access_confirmed_at?: string | null
+  training_sent_at?: string | null
+}
+
+export interface OnboardingTakeoverStateResponse {
+  onboarding_case_id: string
+  onboarding_status: string
+  onboarding_route: string
+  property_unit_id: string
+  landlord_account_id: string
+  current_owner_role: string
+}
+
+export interface ManagerOversightBootstrapResponse {
+  status: string;
+  escalation_case_count: number;
+  pending_approval_count: number;
+  sla_breach_count: number;
+  blocked_case_count: number;
+  overdue_instalments_count: number;
+  inspection_due_count: number;
+  renewal_deadline_count: number;
+  ejari_pending_count: number;
+  escalation_cases: Record<string, unknown>[];
+  pending_approvals: Record<string, unknown>[];
+  sla_breaches: Record<string, unknown>[];
+  blocked_cases: Record<string, unknown>[];
+}
+
+export interface SLABreachSummary {
+  entity_id: string | null;
+  case_type: string | null;
+  case_id: string | null;
+  clock_code: string | null;
+  current_owner_role: string | null;
+  breach_reason: string | null;
+  breach_time: string | null;
+  target_time: string | null;
+  breach_hours: number | null;
+  escalation_state: string | null;
+}
+
+export interface ProcessRemindersResponse {
+  status: string;
+  sla_clocks_breached: number;
+  reminder_events_created: number;
+  actions_taken: string[];
+}
+
+export type CommercialIntakeDisposition =
+  | "new"
+  | "qualified"
+  | "not_qualified"
+  | "compliance_blocked"
+  | "nurture";
+
+export type CommercialIntakeAttentionState = "overdue" | "normal";
+
+export interface CommercialIntakeCaseListItem {
+  case_id: string;
+  landlord_name: string;
+  primary_contact_email: string;
+  requested_service_tier: string;
+  status: string;
+  disposition: CommercialIntakeDisposition;
+  qualification_score: number | null;
+  compliance_path: string | null;
+  next_step_date: string | null;
+  attention_state: CommercialIntakeAttentionState;
+  lead_source: string | null;
+  landlord_type: string | null;
+  community: string | null;
+  urgency: string | null;
+}
+
+export interface CommercialIntakeCaseListResponse {
+  status: string;
+  cases: CommercialIntakeCaseListItem[];
+  total_count: number;
+}
+
+export interface CommercialIntakeCaseAdvanceResponse {
+  status: string;
+  case_id: string;
+  case_status: string;
+  disposition: CommercialIntakeDisposition;
+  audit_event: Record<string, unknown>;
+}
+
+export interface AgedVacancyBucket {
+  bucket: string;
+  label: string;
+  count: number;
+}
+
+export interface AgedVacancyCase {
+  case_id: string;
+  property_unit_id: string | null;
+  status: string;
+  days_in_status: number;
+  age_bucket: string;
+}
+
+export interface AgedVacancyReport {
+  status: string;
+  buckets: AgedVacancyBucket[];
+  cases: AgedVacancyCase[];
+  total_count: number;
+}
+
+export interface FieldCompletenessField {
+  field: string;
+  label: string;
+  missing_count: number;
+  pct: number;
+}
+
+export interface FieldCompletenessEntityType {
+  entity_type: string;
+  label: string;
+  total_count: number;
+  fields: FieldCompletenessField[];
+}
+
+export interface FieldCompletenessReport {
+  status: string;
+  entities: FieldCompletenessEntityType[];
+}
+
+export interface RenewalActionDueItem {
+  case_id: string;
+  tenancy_record_id: string | null;
+  property_unit_id: string | null;
+  contract_end_date: string;
+  days_to_expiry: number;
+  current_owner_role: string;
+  missing_article_notice: boolean;
+  missing_dld_check: boolean;
+  action_urgency: "critical" | "warning";
+}
+
+export interface RenewalActionsDueReport {
+  status: string;
+  items: RenewalActionDueItem[];
+  total_count: number;
 }

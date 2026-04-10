@@ -7,13 +7,23 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   BarChart3, AlertTriangle, Users, Search,
   ChevronRight, X, Briefcase, ArrowUpRight, RefreshCw, Home,
+  Clock, Building2, TrendingUp, CheckCircle2,
 } from "lucide-react";
 import { cn } from "../lib/cn";
 import { usePortfolioBootstrap } from "../hooks/use-properties";
-import type { PortfolioRow, PropertyModuleAction } from "../types/api";
+import {
+  fetchAgedVacancyReport,
+  fetchFieldCompletenessReport,
+  fetchRenewalActionsDueReport,
+} from "../api/reports";
+import type {
+  PortfolioRow, PropertyModuleAction,
+  AgedVacancyReport, FieldCompletenessReport, RenewalActionsDueReport,
+} from "../types/api";
 
 /* ------------------------------------------------------------------ */
 /*  Posture badge config                                                */
@@ -422,8 +432,252 @@ function PortfolioDetailPanel({
 }
 
 /* ------------------------------------------------------------------ */
+/*  Report panels (Phase 10)                                            */
+/* ------------------------------------------------------------------ */
+
+const AGE_BUCKET_STYLE: Record<string, { bar: string; text: string }> = {
+  lt_14: { bar: "bg-status-success", text: "text-status-success" },
+  d14_30: { bar: "bg-status-warning", text: "text-status-warning" },
+  d30_60: { bar: "bg-status-danger", text: "text-status-danger" },
+  gt_60:  { bar: "bg-fg-faint", text: "text-fg-faint" },
+};
+
+function AgedVacancyPanel({ data }: { data: AgedVacancyReport }) {
+  const maxCount = Math.max(...data.buckets.map((b) => b.count), 1);
+  return (
+    <section aria-labelledby="aged-vacancy-heading">
+      <div className="mb-3 flex items-center gap-2">
+        <Clock size={15} className="text-fg-muted" aria-hidden="true" />
+        <h2 id="aged-vacancy-heading" className="text-[length:var(--text-body-size)] font-semibold text-fg-default">
+          Aged Vacancy
+        </h2>
+        <span className="ml-auto text-[length:var(--text-caption-size)] text-fg-muted tabular-nums">
+          {data.total_count} open cases
+        </span>
+      </div>
+
+      {data.total_count === 0 ? (
+        <div className="flex h-24 items-center justify-center gap-2 rounded-[var(--radius-lg)] border border-border-default bg-bg-muted">
+          <CheckCircle2 size={16} className="text-status-success" aria-hidden="true" />
+          <p className="text-[length:var(--text-small-size)] text-fg-muted">No open vacancy cases</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {data.buckets.map((bucket) => {
+            const style = AGE_BUCKET_STYLE[bucket.bucket] ?? AGE_BUCKET_STYLE.gt_60;
+            const pct = Math.round((bucket.count / maxCount) * 100);
+            return (
+              <div key={bucket.bucket}>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <span className="text-[length:var(--text-small-size)] text-fg-default">{bucket.label}</span>
+                  <span className={cn("text-[length:var(--text-small-size)] font-semibold tabular-nums", style.text)}>
+                    {bucket.count}
+                  </span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-bg-muted" role="progressbar"
+                  aria-valuenow={bucket.count} aria-valuemin={0} aria-valuemax={maxCount}
+                  aria-label={`${bucket.label}: ${bucket.count} cases`}>
+                  <div
+                    className={cn("h-full rounded-full transition-all duration-300", style.bar)}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function FieldCompletenessPanel({ data }: { data: FieldCompletenessReport }) {
+  const totalMissing = data.entities.reduce(
+    (sum, e) => sum + e.fields.reduce((s, f) => s + f.missing_count, 0), 0
+  );
+  return (
+    <section aria-labelledby="field-completeness-heading">
+      <div className="mb-3 flex items-center gap-2">
+        <Building2 size={15} className="text-fg-muted" aria-hidden="true" />
+        <h2 id="field-completeness-heading" className="text-[length:var(--text-body-size)] font-semibold text-fg-default">
+          Field Completeness
+        </h2>
+        {totalMissing > 0 && (
+          <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-status-warning-subtle px-2 py-0.5 text-[length:var(--text-caption-size)] font-medium text-status-warning">
+            <AlertTriangle size={10} aria-hidden="true" />
+            {totalMissing} gaps
+          </span>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        {data.entities.map((entity) => (
+          <div key={entity.entity_type}>
+            <p className="mb-1.5 text-[length:var(--text-caption-size)] font-semibold uppercase tracking-wider text-fg-faint">
+              {entity.label} ({entity.total_count})
+            </p>
+            <div className="divide-y divide-border-default rounded-[var(--radius-md)] border border-border-default">
+              {entity.fields.map((f) => (
+                <div key={f.field} className="flex items-center justify-between gap-3 px-3 py-2">
+                  <span className="text-[length:var(--text-small-size)] text-fg-default">{f.label}</span>
+                  <div className="flex items-center gap-2">
+                    {f.missing_count > 0 && (
+                      <AlertTriangle size={11} className="text-status-warning" aria-hidden="true" />
+                    )}
+                    <span className={cn(
+                      "text-[length:var(--text-small-size)] tabular-nums",
+                      f.missing_count > 0 ? "font-semibold text-status-warning" : "text-fg-muted",
+                    )}>
+                      {f.missing_count > 0 ? `${f.missing_count} missing (${f.pct}%)` : "Complete"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+const URGENCY_STYLE = {
+  critical: "bg-status-danger-subtle text-status-danger border-status-danger/20",
+  warning:  "bg-status-warning-subtle text-status-warning border-status-warning/20",
+};
+
+function RenewalActionsDuePanel({ data }: { data: RenewalActionsDueReport }) {
+  return (
+    <section aria-labelledby="renewals-due-heading">
+      <div className="mb-3 flex items-center gap-2">
+        <TrendingUp size={15} className="text-fg-muted" aria-hidden="true" />
+        <h2 id="renewals-due-heading" className="text-[length:var(--text-body-size)] font-semibold text-fg-default">
+          Renewal Actions Due
+        </h2>
+        <span className="ml-auto text-[length:var(--text-caption-size)] text-fg-muted tabular-nums">
+          {data.total_count} {data.total_count === 1 ? "case" : "cases"}
+        </span>
+      </div>
+
+      {data.total_count === 0 ? (
+        <div className="flex h-24 items-center justify-center gap-2 rounded-[var(--radius-lg)] border border-border-default bg-bg-muted">
+          <CheckCircle2 size={16} className="text-status-success" aria-hidden="true" />
+          <p className="text-[length:var(--text-small-size)] text-fg-muted">All renewals are on track</p>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {data.items.slice(0, 8).map((item) => (
+            <li key={item.case_id}
+              className="rounded-[var(--radius-md)] border border-border-default bg-bg-surface p-3"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[length:var(--text-small-size)] font-medium text-fg-default">
+                    {item.case_id}
+                  </p>
+                  <p className="text-[length:var(--text-caption-size)] text-fg-muted">
+                    {item.current_owner_role} · Expires {item.contract_end_date}
+                  </p>
+                </div>
+                <span className={cn(
+                  "shrink-0 inline-flex items-center gap-1 rounded-full border px-2 py-0.5",
+                  "text-[length:var(--text-caption-size)] font-medium",
+                  URGENCY_STYLE[item.action_urgency],
+                )}>
+                  <AlertTriangle size={9} aria-hidden="true" />
+                  {item.days_to_expiry}d
+                </span>
+              </div>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {item.missing_article_notice && (
+                  <span className="rounded-[var(--radius-sm)] bg-bg-muted px-1.5 py-0.5 text-[length:var(--text-caption-size)] text-fg-muted">
+                    No Article Notice
+                  </span>
+                )}
+                {item.missing_dld_check && (
+                  <span className="rounded-[var(--radius-sm)] bg-bg-muted px-1.5 py-0.5 text-[length:var(--text-caption-size)] text-fg-muted">
+                    DLD Not Checked
+                  </span>
+                )}
+              </div>
+            </li>
+          ))}
+          {data.total_count > 8 && (
+            <li className="py-1 text-center text-[length:var(--text-caption-size)] text-fg-faint">
+              +{data.total_count - 8} more cases
+            </li>
+          )}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function ReportsPanel() {
+  const vacancyQ = useQuery({
+    queryKey: ["aged-vacancy-report"],
+    queryFn: fetchAgedVacancyReport,
+    staleTime: 5 * 60 * 1000,
+  });
+  const fieldQ = useQuery({
+    queryKey: ["field-completeness-report"],
+    queryFn: fetchFieldCompletenessReport,
+    staleTime: 5 * 60 * 1000,
+  });
+  const renewalQ = useQuery({
+    queryKey: ["renewal-actions-due-report"],
+    queryFn: fetchRenewalActionsDueReport,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const isLoading = vacancyQ.isLoading || fieldQ.isLoading || renewalQ.isLoading;
+
+  if (isLoading) {
+    return (
+      <div className="flex h-48 items-center justify-center">
+        <RefreshCw size={18} className="animate-spin text-fg-muted" aria-label="Loading reports" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-6 p-6 lg:grid-cols-3">
+      <div className="rounded-[var(--radius-lg)] border border-border-default bg-bg-surface p-5">
+        {vacancyQ.data ? (
+          <AgedVacancyPanel data={vacancyQ.data} />
+        ) : (
+          <p className="text-[length:var(--text-small-size)] text-status-danger">
+            {vacancyQ.error?.message ?? "Failed to load aged vacancy data"}
+          </p>
+        )}
+      </div>
+      <div className="rounded-[var(--radius-lg)] border border-border-default bg-bg-surface p-5">
+        {fieldQ.data ? (
+          <FieldCompletenessPanel data={fieldQ.data} />
+        ) : (
+          <p className="text-[length:var(--text-small-size)] text-status-danger">
+            {fieldQ.error?.message ?? "Failed to load field completeness data"}
+          </p>
+        )}
+      </div>
+      <div className="rounded-[var(--radius-lg)] border border-border-default bg-bg-surface p-5">
+        {renewalQ.data ? (
+          <RenewalActionsDuePanel data={renewalQ.data} />
+        ) : (
+          <p className="text-[length:var(--text-small-size)] text-status-danger">
+            {renewalQ.error?.message ?? "Failed to load renewal actions data"}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main page                                                           */
 /* ------------------------------------------------------------------ */
+
+const REPORTS_VIEW_KEY = "__reports__";
 
 export default function PortfolioPage() {
   const { data, isLoading, isError, error, refetch, isFetching } = usePortfolioBootstrap();
@@ -432,6 +686,7 @@ export default function PortfolioPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const resolvedView = activeView || data?.default_view_key || "portfolio_overview";
+  const isReportsView = resolvedView === REPORTS_VIEW_KEY;
 
   const filteredRows = useMemo(() => {
     if (!data) return [];
@@ -548,34 +803,44 @@ export default function PortfolioPage() {
           {/* View tabs + search */}
           <div className="flex flex-col gap-3 border-b border-border-default bg-bg-surface px-6 py-3">
             <ViewTabs
-              summaries={data.view_summaries}
+              summaries={[
+                ...data.view_summaries,
+                { key: REPORTS_VIEW_KEY, label: "Reports", count: 0 },
+              ]}
               activeKey={resolvedView}
-              onChange={setActiveView}
+              onChange={(key) => {
+                setActiveView(key);
+                if (key === REPORTS_VIEW_KEY) setSelectedId(null);
+              }}
             />
-            <div className="relative">
-              <Search
-                size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-faint"
-                aria-hidden="true"
-              />
-              <input
-                type="search"
-                placeholder="Search portfolio, landlords…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className={cn(
-                  "w-full rounded-[var(--radius-md)] border border-border-default bg-bg-muted",
-                  "py-2 pl-9 pr-4 text-[length:var(--text-small-size)] text-fg-default",
-                  "placeholder:text-fg-faint",
-                  "focus:outline-2 focus:outline-offset-2 focus:outline-border-focus",
-                )}
-              />
-            </div>
+            {!isReportsView && (
+              <div className="relative">
+                <Search
+                  size={14}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-faint"
+                  aria-hidden="true"
+                />
+                <input
+                  type="search"
+                  placeholder="Search portfolio, landlords…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className={cn(
+                    "w-full rounded-[var(--radius-md)] border border-border-default bg-bg-muted",
+                    "py-2 pl-9 pr-4 text-[length:var(--text-small-size)] text-fg-default",
+                    "placeholder:text-fg-faint",
+                    "focus:outline-2 focus:outline-offset-2 focus:outline-border-focus",
+                  )}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Table */}
+          {/* Reports view OR Portfolio table */}
           <div className="flex-1 overflow-y-auto">
-            {filteredRows.length === 0 ? (
+            {isReportsView ? (
+              <ReportsPanel />
+            ) : filteredRows.length === 0 ? (
               <div className="flex h-48 flex-col items-center justify-center gap-2">
                 <BarChart3 size={32} className="text-fg-faint" aria-hidden="true" />
                 <p className="text-[length:var(--text-small-size)] text-fg-muted">

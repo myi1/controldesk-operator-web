@@ -32,7 +32,7 @@ export interface FieldDef {
   min?: number;
   max?: number;
   defaultValue?: string | boolean | number;
-  /** For user-picker fields: filter the user list to this role */
+  /** For user-picker fields: filter users by this role */
   filterRole?: string;
 }
 

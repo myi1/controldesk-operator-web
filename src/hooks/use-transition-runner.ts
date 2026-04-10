@@ -114,6 +114,8 @@ function isFieldValid(field: FieldDef, value: FieldValues[string]): boolean {
       return value === true;
     case "checklist":
       return Array.isArray(value) && (value as string[]).length > 0;
+    case "user-picker":
+      return typeof value === "string" && value.trim().length > 0;
   }
 }
 

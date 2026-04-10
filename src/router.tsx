@@ -24,6 +24,7 @@ const LandlordsPage = lazy(() => import("./pages/LandlordsPage"));
 const VendorsPage = lazy(() => import("./pages/VendorsPage"));
 const InspectionsPage = lazy(() => import("./pages/InspectionsPage"));
 const InspectionDetailPage = lazy(() => import("./pages/InspectionDetailPage"));
+const ManagerOversightPage = lazy(() => import("./pages/ManagerOversightPage"));
 
 /* ------------------------------------------------------------------ */
 /*  Login page fallback (outside AppShell, needs its own Suspense)     */
@@ -126,6 +127,10 @@ export const router = createHashRouter([
             <InspectionDetailPage />
           </Suspense>
         ),
+      },
+      {
+        path: "oversight",
+        element: <ManagerOversightPage />,
       },
 
       // Settings
