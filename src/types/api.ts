@@ -481,6 +481,7 @@ export interface CreatePropertyResponse {
 
 /** Payload shape for POST /api/v1/units and PUT /api/v1/units/{unit_id} */
 export interface UnitWritePayload {
+  // Note: used as both request and response shape — backend ManagedUnitPayload is symmetric.
   unit_id: string;
   title: string;
   property_reference_id: string;
@@ -501,6 +502,21 @@ export interface UnitWritePayload {
   primary_leasing_view?: string;
   primary_finance_record_id?: string;
   primary_finance_section?: string;
+}
+
+/** Response type for POST /api/v1/units and PUT /api/v1/units/{unit_id} */
+export type ManagedUnitResponse = UnitWritePayload;
+
+/** Payload for PATCH /api/v1/properties/{id} */
+export interface PropertyUpdatePayload {
+  label?: string;
+}
+
+/** Response for PATCH /api/v1/properties/{id} */
+export interface PropertyUpdateResponse {
+  property_reference_id: string;
+  label: string;
+  units_updated: number;
 }
 
 export interface DeleteUnitResponse {

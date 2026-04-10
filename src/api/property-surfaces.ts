@@ -10,6 +10,9 @@ import type {
   CreatePropertyPayload,
   CreatePropertyResponse,
   UnitWritePayload,
+  ManagedUnitResponse,
+  PropertyUpdatePayload,
+  PropertyUpdateResponse,
   DeleteUnitResponse,
   PropertyContextBootstrapResponse,
   TenantsBootstrapResponse,
@@ -60,15 +63,15 @@ export async function createProperty(
 
 // ---- Unit CRUD ----
 
-export async function createUnit(payload: UnitWritePayload): Promise<UnitWritePayload> {
-  return apiPost<UnitWritePayload>("/api/v1/units", payload);
+export async function createUnit(payload: UnitWritePayload): Promise<ManagedUnitResponse> {
+  return apiPost<ManagedUnitResponse>("/api/v1/units", payload);
 }
 
 export async function updateUnit(
   unitId: string,
   payload: UnitWritePayload,
-): Promise<UnitWritePayload> {
-  return apiPut<UnitWritePayload>(`/api/v1/units/${unitId}`, payload);
+): Promise<ManagedUnitResponse> {
+  return apiPut<ManagedUnitResponse>(`/api/v1/units/${unitId}`, payload);
 }
 
 export async function deleteUnit(unitId: string): Promise<DeleteUnitResponse> {
@@ -123,9 +126,9 @@ export async function archiveProperty(propertyId: string): Promise<void> {
 
 export async function updateProperty(
   propertyId: string,
-  payload: Record<string, unknown>,
-): Promise<unknown> {
-  return apiPatch<unknown>(`/api/v1/properties/${propertyId}`, payload);
+  payload: PropertyUpdatePayload,
+): Promise<PropertyUpdateResponse> {
+  return apiPatch<PropertyUpdateResponse>(`/api/v1/properties/${propertyId}`, payload);
 }
 
 // ---- Property Context ----
